@@ -88,7 +88,12 @@ html.gated .scrim{background:linear-gradient(0deg,rgba(6,10,12,.92) 0%,rgba(6,10
    quiet spreads from the device, which is the thing the page is actually claiming. */
 .poster{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity .9s var(--ease)}
 .stage.poster-on .poster{opacity:1}
-.stage.has-video video{--mr:clamp(0,(var(--p) - .15)*250,135);
+/* The radius is in vmax so the wavefront covers the same proportion of the frame at any
+   size. Roughly 95vmax reaches the far corner from the unit on a 16:9 viewport, which the
+   ramp hits around p 0.70, right as the payoff caption arrives; the cap covers squarer
+   windows. The 26vmax feather is what keeps the edge a spreading front rather than a
+   circle drawn on the screen. */
+.stage.has-video video{--mr:clamp(0,(var(--p) - .2)*190,135);
   -webkit-mask-image:radial-gradient(circle at 11% 42%,#000 calc(var(--mr)*1vmax),transparent calc((var(--mr) + 26)*1vmax));
   mask-image:radial-gradient(circle at 11% 42%,#000 calc(var(--mr)*1vmax),transparent calc((var(--mr) + 26)*1vmax))}
 .stage.has-video .scene .paint,.stage.has-video .scene .novideo{display:none}
@@ -799,10 +804,13 @@ const MQLS = GATES.map(q => matchMedia(q));
 let seekBusy = false, pendingTime = null, videoStarted = false;
 /* Scroll maps to footage time through a curve, not a straight line. The regrowth in the
    shot runs far faster than the story does: the land is already greening a second in,
-   while the page still has two beats of problem to tell. These keys hold the barren
-   opening under bands one and two, run the melt under band three, and leave the last
-   quarter of the scroll for the settle. */
-const TIMEMAP = [[0, 0], [0.30, 0.10], [0.45, 0.20], [0.70, 0.50], [0.85, 0.75], [1, 1]];
+   while the page still has two beats of problem to tell.
+   The footage is deliberately run ahead of the wavefront that reveals it. What the mask
+   uncovers has to be land that has already come back, or the reveal is just barren
+   footage over a barren poster and nothing reads. So the shot reaches its full meadow by
+   the time band three lands, while the wavefront is still only part way across the frame,
+   and the rest of the scroll is the boundary travelling out to the edges. */
+const TIMEMAP = [[0, 0], [0.20, 0.03], [0.40, 0.22], [0.55, 0.50], [0.75, 0.72], [1, 1]];
 function footageTime(p){
   for (let i = 1; i < TIMEMAP.length; i++) {
     const [p1, u1] = TIMEMAP[i];

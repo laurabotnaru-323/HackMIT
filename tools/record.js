@@ -33,15 +33,17 @@ const secs = +(process.argv[3] || 14);
   });
   await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 92, everyNthFrame: 1 });
 
-  // One pass down through the pinned hero at a near constant reading pace, with a beat
-  // held on the opening and on the settle, then a short run into the page below.
-  // Keys are [fraction of the run, fraction of the scroll distance].
+  // One pass down through the pinned hero, paced for reading rather than at a constant
+  // rate: a short beat on the opening line, a brisk run through the two setup captions,
+  // then the melt itself drawn out over the longest stretch of the run, because that is
+  // the thing worth watching. Keys are [fraction of the run, hero progress].
   await page.evaluate(ms => new Promise(done => {
     const hero = document.querySelector('.hero');
     const heroEnd = hero.offsetHeight - innerHeight;
     const end = heroEnd + innerHeight * 0.75;
     const heroFrac = heroEnd / end;
-    const KEYS = [[0, 0], [0.07, 0], [0.80, heroFrac], [0.88, heroFrac], [1, 1]];
+    const P = [[0, 0], [0.04, 0], [0.17, 0.24], [0.26, 0.33], [0.70, 0.78], [0.82, 1], [0.89, 1]];
+    const KEYS = P.map(([t, p]) => [t, p * heroFrac]).concat([[1, 1]]);
     const t0 = performance.now();
     (function step(now) {
       const p = Math.min(1, (now - t0) / ms);
