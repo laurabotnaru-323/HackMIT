@@ -1,0 +1,1233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>THRESHOLD Dashboard</title>
+<meta name="description" content="Operator dashboard for the THRESHOLD active noise cancellation unit: live spectrum, energy transparency, compliance monitoring and site intelligence.">
+<meta name="theme-color" content="#0d1517">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d1517'/%3E%3Cpath d='M8 32c6 0 6-14 12-14s6 28 12 28 6-28 12-28 6 14 12 14' fill='none' stroke='%235ec98a' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --canvas:#0d1517;--panel:#131d1f;--panel-2:#182827;--line:rgba(238,243,239,.09);--line-strong:rgba(238,243,239,.24);
+  --accent:#5ec98a;--accent-hover:#7fdba4;--accent-muted:rgba(94,201,138,.16);
+  --text-primary:#eef3ef;--text-secondary:#a7b3ad;--muted:#7d8a84;--grid:#1f2c2e;--axis:#2c3a3c;
+  --series:#2f9fc7;--series-wash:rgba(47,159,199,.12);--dim:#7f8a86;--dawn:#e8c079;
+  --good:#0ca30c;--warning:#fab219;--critical:#d03b3b;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;--body:Figtree,ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  --ease:cubic-bezier(.22,.61,.36,1);color-scheme:dark;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){color-scheme:dark}}
+:root[data-theme="dark"]{color-scheme:dark}
+*{box-sizing:border-box}
+html,body{overflow-x:hidden;overflow-x:clip}
+body{margin:0;background:var(--canvas);color:var(--text-primary);font-family:var(--body);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-weight:600}
+p{margin:0}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.skip{position:absolute;left:-9999px;top:8px;background:var(--accent);color:#08140c;padding:8px 12px;border-radius:8px;z-index:100}
+.skip:focus{left:8px}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:30;background:rgba(13,21,23,.9);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.top .row{display:flex;align-items:center;gap:18px;padding:10px 20px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--display);font-weight:700;letter-spacing:.14em;font-size:14px;color:var(--text-primary)}
+.brand svg{width:24px;height:24px}
+.site{display:flex;align-items:baseline;gap:10px;padding-left:18px;border-left:1px solid var(--line)}
+.site b{font-weight:600}
+.site span{font-family:var(--mono);font-size:11px;color:var(--text-secondary);letter-spacing:.06em}
+.tabs{display:flex;gap:4px;margin-left:auto}
+.tab{background:none;border:1px solid transparent;border-radius:8px;padding:8px 14px;color:var(--text-secondary);cursor:pointer;transition:all .3s var(--ease)}
+.tab:hover{color:var(--text-primary);background:var(--panel-2)}
+.tab[aria-selected="true"]{color:var(--text-primary);background:var(--panel-2);border-color:var(--line-strong)}
+.right{display:flex;align-items:center;gap:12px}
+.live{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--text-secondary);padding:6px 10px;border:1px solid var(--line);border-radius:999px}
+.live i{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:blink 2.4s ease-in-out -1s infinite}
+@keyframes blink{50%{opacity:.35}}
+.user{font-family:var(--mono);font-size:11px;color:var(--text-secondary)}
+.btn{background:var(--panel-2);border:1px solid var(--line-strong);border-radius:8px;padding:8px 12px;cursor:pointer;color:var(--text-primary);transition:all .3s var(--ease);font-weight:500;font-size:13px;display:inline-flex;align-items:center;gap:8px;justify-content:center}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#08140c}
+.btn.primary:hover{background:var(--accent-hover);border-color:var(--accent-hover);color:#08140c}
+.btn.sm{padding:6px 10px;font-size:12px}
+.btn.ghost{background:none}
+@media (pointer:coarse){.btn,.tab{min-height:44px}}
+@media (max-width:860px){.tabs{margin-left:0;width:100%;order:5}.site{display:none}}
+
+/* layout */
+main{padding:18px 20px 60px;max-width:1500px;margin:0 auto}
+.view{display:none}
+.view.active{display:block;animation:fade .5s var(--ease)}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}}
+.grid{display:grid;gap:14px}
+.stats{grid-template-columns:repeat(5,1fr)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;position:relative;min-width:0}
+.panel h2{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-secondary);font-weight:500;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.panel h2 .sub{font-family:var(--body);text-transform:none;letter-spacing:0;color:var(--muted);font-size:12px}
+.stat .label{font-size:12px;color:var(--text-secondary);margin-bottom:6px}
+.stat .value{font-size:28px;font-weight:600;letter-spacing:-.02em;line-height:1.05}
+.stat .value small{font-size:13px;color:var(--text-secondary);font-weight:500;margin-left:4px}
+.stat.hero .value{font-size:52px}
+.stat .delta{font-family:var(--mono);font-size:11px;color:var(--text-secondary);margin-top:8px;letter-spacing:.04em}
+.stat .spark{display:block;margin-top:10px;width:100%;height:28px}
+.status{display:inline-flex;align-items:center;gap:8px;font-weight:500}
+.status i{width:9px;height:9px;border-radius:50%;background:var(--good);flex:none}
+.status.warn i{background:var(--warning)}
+.status.bad i{background:var(--critical)}
+.status svg{width:16px;height:16px;flex:none}
+.big{grid-template-columns:2fr 1fr}
+.two{grid-template-columns:1fr 1fr}
+.three{grid-template-columns:1fr 1fr 1fr}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden}
+.seg button{background:none;border:0;padding:6px 10px;color:var(--text-secondary);cursor:pointer;font-size:12px}
+.seg button[aria-pressed="true"]{background:var(--panel-2);color:var(--text-primary)}
+.toggle{display:inline-flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.toggle .sw{width:40px;height:22px;border-radius:999px;background:var(--axis);position:relative;transition:background .3s var(--ease);border:1px solid var(--line-strong)}
+.toggle .sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--text-secondary);transition:transform .3s var(--ease),background .3s}
+.toggle[aria-checked="true"] .sw{background:var(--accent-muted);border-color:var(--accent)}
+.toggle[aria-checked="true"] .sw::after{transform:translateX(18px);background:var(--accent)}
+.chart{position:relative;width:100%}
+.chart svg{display:block;width:100%;overflow:visible}
+.chart .tip{position:absolute;pointer-events:none;background:rgba(13,21,23,.95);border:1px solid var(--line-strong);border-radius:8px;padding:8px 10px;font-size:12px;display:none;min-width:150px;z-index:5}
+.chart .tip b{display:block;font-size:14px;font-weight:600}
+.chart .tip .k{display:inline-block;width:12px;height:2px;vertical-align:middle;margin-right:6px}
+.chart .tip div{display:flex;justify-content:space-between;gap:12px;color:var(--text-secondary)}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--text-secondary);flex-wrap:wrap}
+.legend span::before{content:"";display:inline-block;width:14px;height:2px;background:var(--c);vertical-align:middle;margin-right:7px;border-radius:2px}
+.axis text{fill:var(--muted);font-family:var(--mono);font-size:10px}
+.axis line{stroke:var(--grid)}
+.axis .base{stroke:var(--axis)}
+.note{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.04em;margin-top:10px}
+.flash{font-family:var(--mono);font-size:11px;color:var(--accent);opacity:0;transition:opacity .4s}
+.flash.on{opacity:1}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:baseline}
+th{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:500}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+.kv{display:grid;grid-template-columns:1fr auto;gap:8px 14px;font-size:13px}
+.kv dt{color:var(--text-secondary)}
+.kv dd{margin:0;font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right}
+.kv dd.big{font-size:18px;font-weight:600;font-family:var(--body)}
+.meter{height:8px;border-radius:999px;background:rgba(47,159,199,.18);overflow:hidden;margin-top:8px}
+.meter i{display:block;height:100%;background:var(--series);border-radius:999px;transition:width .6s var(--ease)}
+.meter.warn i{background:var(--warning)}.meter.bad i{background:var(--critical)}
+.field{display:grid;gap:5px;font-size:12px;color:var(--text-secondary)}
+.field input,.field select{background:var(--canvas);border:1px solid var(--line-strong);border-radius:8px;padding:8px 10px;color:var(--text-primary);font-size:13px;width:100%}
+.field input[type=range]{padding:0;background:none;border:0}
+.inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.warnings{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.warnings li{display:flex;gap:10px;align-items:baseline;padding:8px 10px;border-radius:8px;background:var(--panel-2);font-size:12.5px}
+.warnings li::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--warning);flex:none;position:relative;top:1px}
+.warnings li.bad::before{background:var(--critical)}
+.warnings li.ok::before{background:var(--good)}
+.log{list-style:none;margin:0;padding:0;display:grid;gap:8px;max-height:260px;overflow:auto}
+.log li{border:1px solid var(--line);border-radius:8px;padding:10px;font-size:12.5px;background:var(--canvas);animation:fade .5s var(--ease)}
+.log li b{font-family:var(--mono);font-size:11px;color:var(--text-secondary);display:block;margin-bottom:4px;letter-spacing:.04em}
+.log li .msg{font-family:var(--mono);font-size:11.5px;color:var(--text-primary);white-space:pre-wrap}
+.contacts{display:grid;gap:8px}
+.contact{display:flex;justify-content:space-between;gap:10px;padding:10px;border:1px solid var(--line);border-radius:8px;font-size:12.5px}
+.contact span{font-family:var(--mono);color:var(--text-secondary);font-size:11.5px}
+.disc{font-family:var(--mono);font-size:11px;color:var(--warning);border:1px solid rgba(250,178,25,.3);background:rgba(250,178,25,.06);padding:8px 10px;border-radius:8px;margin-top:12px;letter-spacing:.02em}
+
+/* site intelligence */
+.inputs{grid-template-columns:repeat(4,1fr)}
+.weights{display:grid;gap:10px}
+.w{display:grid;grid-template-columns:1fr 60px;gap:10px;align-items:center;font-size:12.5px}
+.w label{display:flex;justify-content:space-between;color:var(--text-secondary)}
+.w label b{font-family:var(--mono);color:var(--text-primary);font-weight:500}
+.w input[type=range]{width:100%;accent-color:var(--accent)}
+.w output{font-family:var(--mono);font-size:12px;text-align:right}
+.cands{grid-template-columns:repeat(3,1fr)}
+.cand{display:grid;gap:10px}
+.cand .render{width:100%;aspect-ratio:16/10;border-radius:10px;overflow:hidden;background:var(--canvas);border:1px solid var(--line)}
+.cand .render svg,.cand .render img{width:100%;height:100%;display:block;object-fit:cover}
+.cand h3{font-size:15px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.cand h3 span{font-family:var(--mono);font-size:22px;font-weight:600}
+.cand .tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;padding:4px 8px;border-radius:999px;border:1px solid var(--line-strong);color:var(--text-secondary)}
+.tag.lo{border-color:rgba(12,163,12,.5)}.tag.hi{border-color:rgba(208,59,59,.55)}.tag.md{border-color:rgba(250,178,25,.5)}
+.bars{display:grid;gap:5px;font-size:11.5px}
+.bar{display:grid;grid-template-columns:150px 1fr 40px;gap:8px;align-items:center;color:var(--text-secondary)}
+.bar i{display:block;height:8px;border-radius:0 4px 4px 0;background:var(--series);transition:width .6s var(--ease)}
+.bar b{font-family:var(--mono);font-weight:500;color:var(--text-primary);text-align:right}
+#map{position:relative;height:440px;border-radius:10px;overflow:hidden;background:#101a1c;border:1px solid var(--line)}
+#map svg{width:100%;height:100%;display:block}
+#map .pin{cursor:pointer}
+#map .pin circle.disc{transition:r .3s var(--ease)}
+#map .pin:hover circle.disc,#map .pin:focus circle.disc{r:17}
+#map .pin text{font:600 13px var(--mono);fill:#08140c;pointer-events:none}
+#map .pin.dim text{fill:#101a1c}
+#map .lbl{font:500 11px var(--body);fill:var(--text-primary);paint-order:stroke;stroke:rgba(8,12,14,.75);stroke-width:3px;stroke-linejoin:round}
+#map .lbl.city{font:600 12.5px var(--body)}
+#map .scale text,#map .rose text{font:500 10px var(--mono);fill:var(--text-secondary)}
+.mapnote{position:absolute;left:12px;bottom:10px;font-family:var(--mono);font-size:10.5px;color:var(--text-secondary);pointer-events:none;background:rgba(13,21,23,.72);padding:4px 8px;border-radius:6px}
+.mappop{position:absolute;background:rgba(13,21,23,.96);border:1px solid var(--line-strong);border-radius:8px;padding:9px 11px;font-size:12.5px;pointer-events:none;display:none;max-width:230px;z-index:4}
+.mappop b{display:block;margin-bottom:3px}
+.mappop span{color:var(--text-secondary);font-size:11.5px;font-family:var(--mono)}
+.gmap{font-size:11.5px;color:var(--text-secondary);text-decoration:none;border-bottom:1px solid var(--line-strong)}
+.gmap:hover{color:var(--accent);border-color:var(--accent)}
+
+/* ---------- Grafana-style chrome ---------- */
+.panel.chrome{padding:0;display:flex;flex-direction:column}
+.panel.chrome > h2{font-family:var(--body);font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--text-primary);margin:0;padding:8px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;min-height:36px}
+.panel.chrome > h2 .sub{margin-left:auto;color:var(--muted);font-size:11.5px;font-family:var(--body);text-transform:none;letter-spacing:0}
+.panel.chrome > .body{padding:12px;flex:1;min-width:0}
+.panel.stat{padding:12px}
+.pmenu{margin-left:6px;background:none;border:0;color:var(--muted);cursor:pointer;padding:2px 6px;border-radius:4px;opacity:0;transition:opacity .2s var(--ease),background .2s;line-height:1;font-size:15px}
+.panel:hover .pmenu,.pmenu:focus{opacity:1}
+.pmenu:hover{background:var(--panel-2);color:var(--text-primary)}
+.pmenu-list{position:absolute;right:8px;top:36px;z-index:20;background:var(--panel-2);border:1px solid var(--line-strong);border-radius:8px;padding:4px;min-width:170px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:none}
+.pmenu-list.open{display:block}
+.pmenu-list button{display:flex;width:100%;justify-content:space-between;gap:16px;background:none;border:0;color:var(--text-primary);text-align:left;padding:7px 10px;border-radius:6px;cursor:pointer;font-size:13px}
+.pmenu-list button:hover{background:var(--panel)}
+.pmenu-list button span{color:var(--muted);font-family:var(--mono);font-size:11px}
+/* time + refresh pickers */
+.picker{position:relative}
+.picker > button{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line-strong);border-radius:6px;padding:7px 10px;color:var(--text-primary);cursor:pointer;font-size:13px;white-space:nowrap}
+.picker > button:hover{border-color:var(--accent)}
+.picker > button .car{color:var(--muted);font-size:10px}
+.picker ul{position:absolute;right:0;top:calc(100% + 6px);z-index:40;background:var(--panel-2);border:1px solid var(--line-strong);border-radius:8px;padding:4px;margin:0;list-style:none;min-width:180px;box-shadow:0 8px 24px rgba(0,0,0,.55);display:none}
+.picker.open ul{display:block}
+.picker li button{display:flex;width:100%;justify-content:space-between;gap:16px;background:none;border:0;color:var(--text-primary);padding:7px 10px;border-radius:6px;cursor:pointer;font-size:13px;text-align:left}
+.picker li button:hover{background:var(--panel)}
+.picker li button[aria-current="true"]::after{content:"✓";color:var(--accent)}
+/* legend table, Grafana style */
+.legendtab{width:100%;font-size:12px;margin-top:8px;border-collapse:collapse}
+.legendtab th{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500;padding:4px 6px;text-align:right;border:0}
+.legendtab th:first-child{text-align:left}
+.legendtab td{padding:4px 6px;border:0;color:var(--text-secondary);text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.legendtab td:first-child{text-align:left;font-family:var(--body);color:var(--text-primary)}
+.legendtab td:first-child i{display:inline-block;width:14px;height:2px;border-radius:2px;vertical-align:middle;margin-right:8px}
+.legendtab tr:hover td{background:rgba(238,243,239,.03)}
+/* stat panel value colouring, Grafana thresholds */
+.stat .value{color:var(--sc,var(--text-primary))}
+.stat .value small{color:var(--text-secondary)}
+/* inspect drawer */
+.drawer{position:fixed;inset:0;z-index:60;display:none}
+.drawer.open{display:block}
+.drawer .back{position:absolute;inset:0;background:rgba(6,10,12,.6)}
+.drawer .sheet{position:absolute;right:0;top:0;bottom:0;width:min(560px,100%);background:var(--panel);border-left:1px solid var(--line-strong);display:flex;flex-direction:column;animation:slide .35s var(--ease)}
+@keyframes slide{from{transform:translateX(24px);opacity:0}}
+.drawer header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.drawer header h3{font-size:15px;flex:1}
+.drawer .scroll{overflow:auto;padding:12px 16px}
+.drawer table{font-size:12.5px}
+.drawer .x{background:none;border:0;color:var(--text-secondary);font-size:20px;cursor:pointer;width:34px;height:34px;border-radius:6px}
+.drawer .x:hover{background:var(--panel-2);color:var(--text-primary)}
+@media (max-width:860px){.picker ul{right:auto;left:0}}
+
+.energy-grid{grid-template-columns:260px 1fr;gap:20px}
+.site-grid{grid-template-columns:1fr 340px}
+@media (max-width:900px){.energy-grid,.site-grid{grid-template-columns:1fr}}
+@media (max-width:640px){.stat .value{font-size:24px}.stat.hero .value{font-size:38px}.top .row{gap:10px;padding:8px 12px}main{padding:12px 12px 48px}}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tablewrap table{min-width:560px}
+.tablewrap:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.solar{display:flex;gap:9px;align-items:baseline;font-size:12px;color:var(--text-secondary);padding:9px 11px;border:1px solid rgba(232,192,121,.22);background:rgba(232,192,121,.05);border-radius:9px}
+.solar .sun{width:9px;height:9px;border-radius:50%;background:var(--dawn);flex:none;position:relative;top:1px;box-shadow:0 0 8px rgba(232,192,121,.6)}
+@media (max-width:1100px){.stats{grid-template-columns:repeat(3,1fr)}.big{grid-template-columns:1fr}.three{grid-template-columns:1fr}.inputs{grid-template-columns:repeat(2,1fr)}.cands{grid-template-columns:1fr}}
+@media (max-width:640px){.stats{grid-template-columns:1fr 1fr}.two{grid-template-columns:1fr}.inputs{grid-template-columns:1fr}.stat.hero .value{font-size:40px}.bar{grid-template-columns:110px 1fr 36px}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top">
+  <div class="row">
+    <a class="brand" href="index.html" aria-label="THRESHOLD home"><svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#13201f"/><path d="M8 32c6 0 6-14 12-14s6 28 12 28 6-28 12-28 6 14 12 14" fill="none" stroke="#5ec98a" stroke-width="4" stroke-linecap="round"/></svg>THRESHOLD</a>
+    <div class="site"><b id="siteName">Gainesville Enclosure 1</b><span>Prince William County, VA</span></div>
+    <div class="tabs" role="tablist" aria-label="Dashboard sections">
+      <button class="tab" role="tab" id="tab-anc" aria-controls="view-anc" aria-selected="true">ANC live</button>
+      <button class="tab" role="tab" id="tab-fin" aria-controls="view-fin" aria-selected="false">Financial &amp; compliance</button>
+      <button class="tab" role="tab" id="tab-site" aria-controls="view-site" aria-selected="false">Site intelligence</button>
+    </div>
+    <div class="right">
+      <span class="live" title="Hardware not connected. Readings are generated in the browser."><i></i>SIMULATED FEED</span>
+      <div class="picker" id="timePicker"><button type="button" aria-haspopup="true" aria-expanded="false"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="6.4" stroke="currentColor" stroke-width="1.4"/><path d="M8 4.4V8l2.4 1.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><span id="timeLabel">Last 1 hour</span><span class="car">▾</span></button><ul role="menu"></ul></div>
+      <div class="picker" id="refreshPicker"><button type="button" aria-haspopup="true" aria-expanded="false"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M13.4 8a5.4 5.4 0 1 1-1.6-3.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M13.6 2.2v3.2h-3.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="refreshLabel">500ms</span><span class="car">▾</span></button><ul role="menu"></ul></div>
+      <span class="user" id="who"></span>
+      <button class="btn sm ghost" id="logout" type="button">Log out</button>
+    </div>
+  </div>
+</header>
+
+<main id="main" tabindex="-1">
+
+<!-- ================= TAB 1 ================= -->
+<section class="view active" id="view-anc" role="tabpanel" aria-labelledby="tab-anc">
+  <div class="grid stats">
+    <div class="panel stat"><div class="label">ANC status</div><div class="value"><span class="status" id="ancStatus"><i></i>Active</span></div><div class="delta" id="ancSince">running 6h 12m</div></div>
+    <div class="panel stat hero"><div class="label">Noise reduction</div><div class="value"><span id="attVal">12.4</span><small>dB</small></div><svg class="spark" id="sparkAtt" aria-hidden="true"></svg></div>
+    <div class="panel stat"><div class="label">Residual noise</div><div class="value"><span id="resVal">54.2</span><small>dBA</small></div><div class="delta" id="resDelta">baseline 66.6 dBA</div></div>
+    <div class="panel stat"><div class="label">System power</div><div class="value"><span id="powVal">5.2</span><small>W</small></div><div class="delta" id="powDelta">0.42 dB per watt</div></div>
+    <div class="panel stat"><div class="label">Threshold status</div><div class="value" style="font-size:18px"><span class="status" id="thrStatus"><i></i>Below configured limit</span></div><div class="delta" id="thrDelta">55 dBA night, Prince William County</div></div>
+  </div>
+
+  <div class="grid big" style="margin-top:14px">
+    <div class="panel">
+      <h2>Live noise spectrum <span class="sub">frequency (Hz) against sound level (dB)</span></h2>
+      <div class="controls" style="margin-bottom:10px">
+        <button class="toggle" id="ancToggle" role="switch" aria-checked="true" type="button"><span class="sw"></span><span>ANC on</span></button>
+        <button class="btn sm" id="captureBtn" type="button">Capture new baseline</button>
+        <span class="flash" id="captureFlash">Baseline captured</span>
+      </div>
+      <div class="chart" id="spectrum" style="height:360px"><div class="tip" id="specTip"></div></div>
+      <div id="specLegend"></div>
+      <p class="note">Peak at the dominant tone falls when ANC engages. Hover for values at any frequency.</p>
+    </div>
+    <div class="grid" style="align-content:start">
+      <div class="panel">
+        <h2>Cancellation performance</h2>
+        <table>
+          <tbody>
+            <tr><td>Dominant frequency</td><td class="num" id="cDom">120 Hz</td></tr>
+            <tr><td>Cancellation frequency</td><td class="num" id="cCan">120 Hz</td></tr>
+            <tr><td>Phase adjustment</td><td class="num" id="cPh">180°</td></tr>
+            <tr><td>Baseline level</td><td class="num" id="cBase">66.6 dBA</td></tr>
+            <tr><td>Residual level</td><td class="num" id="cRes">54.2 dBA</td></tr>
+            <tr><td>Attenuation achieved</td><td class="num" id="cAtt">12.4 dB</td></tr>
+            <tr><td>ANC status</td><td class="num" id="cStat">Active</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="panel">
+        <h2>Hardware</h2>
+        <dl class="kv">
+          <dt>Unit</dt><dd>THR-01 prototype</dd>
+          <dt>Microphone</dt><dd>MEMS, uncalibrated</dd>
+          <dt>Link</dt><dd id="linkState">not connected</dd>
+          <dt>Feed</dt><dd>browser simulation</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:14px">
+    <h2>Energy transparency <span class="sub">what the quiet costs to run</span></h2>
+    <div class="grid energy-grid">
+      <dl class="kv" style="align-content:start">
+        <dt>Current power</dt><dd class="big" id="ePow">5.2 W</dd>
+        <dt>Energy used today</dt><dd id="eToday">31.4 Wh</dd>
+        <dt>Estimated daily cost</dt><dd id="eCost">$0.017</dd>
+        <dt>Noise-reduction efficiency</dt><dd id="eEff">2.38 dB/W</dd>
+        <dt>Price assumption</dt><dd id="ePrice">$0.14/kWh</dd>
+      </dl>
+      <div>
+        <div class="chart" id="powerChart" style="height:200px"><div class="tip" id="powTip"></div></div>
+        <div id="powLegend"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= TAB 2 ================= -->
+<section class="view" id="view-fin" role="tabpanel" aria-labelledby="tab-fin" hidden>
+  <div class="grid two">
+    <div class="panel">
+      <h2>Cost of quiet operation</h2>
+      <dl class="kv">
+        <dt>Current operating cost</dt><dd class="big" id="fNow">$0.0007/h</dd>
+        <dt>Estimated daily cost</dt><dd id="fDay">$0.017</dd>
+        <dt>Estimated monthly cost</dt><dd id="fMonth">$0.52</dd>
+        <dt>Cost per decibel-hour reduced</dt><dd id="fDbh">$0.00006</dd>
+      </dl>
+      <div class="field" style="margin-top:14px;max-width:260px"><label for="price">Energy price assumption ($ per kWh)</label><input id="price" type="number" step="0.01" min="0.01" value="0.14"></div>
+      <p class="note">Costs follow the unit's live power draw and the price you set here.</p>
+    </div>
+    <div class="panel">
+      <h2>Projected avoided mitigation cost <span class="sub">stretch feature, illustrative</span></h2>
+      <div class="grid" style="grid-template-columns:1fr 1fr;gap:10px">
+        <div class="field"><label for="fence">Fence line needing a barrier (m)</label><input id="fence" type="number" value="600" min="0"></div>
+        <div class="field"><label for="barrier">Sound barrier cost ($ per m)</label><input id="barrier" type="number" value="450" min="0"></div>
+        <div class="field"><label for="claim">Nuisance claim exposure ($)</label><input id="claim" type="number" value="1200000" min="0"></div>
+        <div class="field"><label for="prob">Chance of a claim without mitigation (%)</label><input id="prob" type="number" value="25" min="0" max="100"></div>
+      </div>
+      <dl class="kv" style="margin-top:14px">
+        <dt>Barrier construction avoided</dt><dd id="aBarrier">$270,000</dd>
+        <dt>Expected claim cost avoided</dt><dd id="aClaim">$300,000</dd>
+        <dt>Projected avoided cost</dt><dd class="big" id="aTotal">$570,000</dd>
+      </dl>
+      <p class="note">Barriers help with higher frequencies. The low tone bends around them, which is why cancellation at the source is the cheaper path.</p>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:14px">
+    <h2>Sound level against the limit in force <span class="sub">rolling 2 minutes</span></h2>
+    <div class="chart" id="levelChart" style="height:230px"><div class="tip" id="lvlTip"></div></div>
+    <div id="lvlLegend"></div>
+  </div>
+
+  <div class="grid three" style="margin-top:14px">
+    <div class="panel">
+      <h2>Legal compliance monitoring</h2>
+      <div class="field" style="margin-bottom:12px"><label for="profile">Configured profile</label><select id="profile"></select></div>
+      <dl class="kv">
+        <dt>Day threshold</dt><dd id="pDay">60 dBA</dd>
+        <dt>Night threshold</dt><dd id="pNight">55 dBA</dd>
+        <dt>Applicable threshold now</dt><dd id="pNow">55 dBA</dd>
+        <dt>Current estimated level</dt><dd class="big" id="pLevel">54.2 dBA</dd>
+        <dt>Margin</dt><dd id="pMargin">0.8 dB below threshold</dd>
+        <dt>Status</dt><dd><span class="status" id="pStatus"><i></i>Within configured threshold</span></dd>
+      </dl>
+      <div class="meter" id="pMeter"><i style="width:90%"></i></div>
+      <dl class="kv" style="margin-top:14px">
+        <dt>Time of day</dt><dd id="pClock">23:41</dd>
+        <dt>Baseline without THRESHOLD</dt><dd id="pBase">66.6 dBA</dd>
+        <dt>Measured level with THRESHOLD</dt><dd id="pWith">54.2 dBA</dd>
+        <dt>Number of exceedances today</dt><dd id="pCount">0</dd>
+      </dl>
+      <div class="inline" style="margin-top:12px">
+        <button class="toggle" id="nightToggle" role="switch" aria-checked="false" type="button"><span class="sw"></span><span>Force night profile for the demo</span></button>
+      </div>
+      <p class="disc">Prototype readings are not certified compliance measurements.</p>
+    </div>
+    <div class="panel">
+      <h2>Threshold warnings</h2>
+      <ul class="warnings" id="warnings"><li class="ok">No warnings. Mitigation active, level under the limit in force.</li></ul>
+      <div class="inline" style="margin-top:14px">
+        <button class="btn sm" id="simExceed" type="button">Simulate exceedance (generator test)</button>
+        <button class="btn sm ghost" id="testSms" type="button">Send test text</button>
+      </div>
+      <p class="note">When the level stays above the limit in force, the unit texts the people below. One text per contact per minute.</p>
+      <div class="contacts" style="margin-top:12px" id="contacts"></div>
+    </div>
+    <div class="panel">
+      <h2>Alert log <span class="sub" id="logCount">0 sent</span></h2>
+      <ul class="log" id="alertLog"><li><b>No alerts yet</b><span class="msg">Texts appear here as they are sent.</span></li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- ================= TAB 3 ================= -->
+<section class="view" id="view-site" role="tabpanel" aria-labelledby="tab-site" hidden>
+  <div class="panel">
+    <h2>Company inputs <span class="sub">what the next facility needs</span></h2>
+    <form id="siteForm" class="grid inputs" onsubmit="return false">
+      <div class="field"><label for="mw">Required IT capacity (MW)</label><input id="mw" type="number" value="120" min="1"></div>
+      <div class="field"><label for="acres">Estimated facility footprint (acres)</label><input id="acres" type="number" value="80" min="1"></div>
+      <div class="field"><label for="region">Preferred state or region</label><select id="region"></select></div>
+      <div class="field"><label for="dist">Maximum distance from a major city (km)</label><input id="dist" type="number" value="90" min="5"></div>
+      <div class="field"><label for="powerAvail">Required power availability</label><select id="powerAvail"><option value="1">Standard, phased delivery</option><option value="1.3" selected>Firm, day one</option><option value="1.6">Firm plus 2x headroom</option></select></div>
+      <div class="field"><label for="cooling">Cooling method</label><select id="cooling"><option value="air">Air, dry coolers</option><option value="evap" selected>Evaporative</option><option value="liquid">Liquid to chip, closed loop</option></select></div>
+      <div class="field"><label for="water">Estimated water demand (m³ per day)</label><input id="water" type="number" value="1500" min="0"></div>
+      <div class="field"><label for="latency">Latency and fiber requirement</label><select id="latency"><option value="1">Relaxed, batch workloads</option><option value="1.4" selected>Standard, under 10 ms to metro</option><option value="1.9">Strict, under 3 ms</option></select></div>
+      <div class="field"><label for="expand">Expansion plans</label><select id="expand"><option value="1">None</option><option value="1.5" selected>Double within 5 years</option><option value="2.5">Campus, 4x or more</option></select></div>
+      <div class="field"><label for="noiseSens">Community-noise sensitivity preference</label><select id="noiseSens"><option value="0.7">Low</option><option value="1" selected>Standard</option><option value="1.5">High</option></select></div>
+      <div class="field"><label for="ecoSens">Wildlife and ecological sensitivity preference</label><select id="ecoSens"><option value="0.7">Low</option><option value="1" selected>Standard</option><option value="1.5">High</option></select></div>
+      <div class="field" style="align-self:end"><button class="btn primary" id="runSite" type="button">Rank candidate sites</button></div>
+    </form>
+  </div>
+
+  <div class="grid site-grid" style="margin-top:14px">
+    <div class="panel" style="position:relative">
+      <h2>Candidate map <span class="sub" id="mapSub">top three parcels for the selected region</span></h2>
+      <div class="controls" style="margin-bottom:10px"><span class="seg" id="basemap" role="group" aria-label="Base map"><button aria-pressed="true" data-b="map">Map</button><button aria-pressed="false" data-b="sat">Satellite</button></span><span class="note" style="margin:0 0 0 auto">Parcels sit at their real coordinates. Terrain is drawn, and the renders are models.</span></div>
+      <div id="map"><div class="mappop" id="mapPop"></div><div class="mapnote" id="mapNote"></div></div>
+    </div>
+    <div class="panel">
+      <h2>Disruption score weights <span class="sub">sum to 100</span></h2>
+      <div class="controls" style="margin-bottom:12px"><span class="seg" id="presets" role="group" aria-label="Weight presets"><button aria-pressed="true" data-p="balanced">Balanced</button><button aria-pressed="false" data-p="ai">AI training operator</button><button aria-pressed="false" data-p="community">Community review board</button></span></div>
+      <div class="weights" id="weights"></div>
+      <p class="note" id="wsum">Total 100</p>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:14px">
+    <h2>Recommended results <span class="sub">lower disruption means higher suitability</span></h2>
+    <div class="tablewrap" tabindex="0" role="region" aria-label="Recommended results, scrolls sideways on narrow screens">
+      <table id="results">
+        <thead><tr><th>Candidate</th><th class="num">Suitability</th><th>Community impact</th><th>Grid readiness</th><th>Water stress</th><th>Habitat impact</th><th class="num">Disruption</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="grid cands" style="margin-top:14px" id="cards"></div>
+  <p class="note">Scores are a transparent weighted sum of seven factors. Solar figures use regional irradiance and assume 40 percent of the parcel is usable at roughly 0.4 MW per acre. Factor values for each parcel are estimates for the prototype; a production version would draw them from census, grid, water and satellite data.</p>
+</section>
+</main>
+
+<div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" hidden>
+  <div class="back" data-dclose></div>
+  <div class="sheet">
+    <header><h3 id="drawerTitle">Panel data</h3><button class="btn sm ghost" id="drawerCsv" type="button">Download CSV</button><button class="x" type="button" data-dclose aria-label="Close">×</button></header>
+    <div class="scroll"><table id="drawerTable"><thead></thead><tbody></tbody></table></div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const svgNS = 'http://www.w3.org/2000/svg';
+const el = (n, attrs = {}, parent) => { const e = document.createElementNS(svgNS, n); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const fmt = (v, d = 1) => Number(v).toFixed(d);
+const money = (v, d = 0) => '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function rng(seed){ let s = seed >>> 0; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
+
+/* ---------- session guard ---------- */
+let session = null;
+try { session = JSON.parse(localStorage.getItem('threshold.session') || 'null'); } catch (_) {}
+if (!session) { location.replace('index.html#login'); }
+$('#who').textContent = session ? session.email : '';
+$('#logout').addEventListener('click', () => { try { localStorage.removeItem('threshold.session'); } catch (_) {} location.href = 'index.html'; });
+
+/* ---------- tabs ---------- */
+const tabs = $$('.tab');
+function showTab(id){
+  tabs.forEach(t => { const on = t.id === id; t.setAttribute('aria-selected', on); const v = $('#' + t.getAttribute('aria-controls')); v.hidden = !on; v.classList.toggle('active', on); });
+  try { localStorage.setItem('threshold.tab', id); } catch (_) {}
+  if (id === 'tab-site') setTimeout(initMap, 50);
+  if (id === 'tab-anc') { spectrum.resize(); power.resize(); }
+}
+tabs.forEach(t => t.addEventListener('click', () => showTab(t.id)));
+tabs.forEach((t, i) => t.addEventListener('keydown', e => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { const n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; n.focus(); showTab(n.id); } }));
+
+/* ---------- simulated instrument ---------- */
+const postTick = [];
+const S = {
+  anc: true, ancSince: Date.now() - (6 * 60 + 12) * 60000,
+  domFreq: 120, phase: 180, attTarget: 12.4, att: 12.4, baseLevel: 66.6,
+  blend: 1,             // 0 = raw baseline shown, 1 = fully cancelled (eases on toggle)
+  power: 5.2, standby: 0.4,
+  event: null,          // simulated exceedance: {until, add}
+  exceedances: 0, streak: 0, lastSms: {}, smsCount: 0,
+  forceNight: false, price: 0.14,
+  attHist: [], powHist: { hour: [], day: [], week: [] }
+};
+const r0 = rng(42);
+for (let i = 0; i < 24; i++) S.attHist.push(12.4 + (r0() - 0.5) * 0.6);
+(function seedPower(){
+  const mk = (n, f) => { const a = []; for (let i = 0; i < n; i++) a.push(f(i)); return a; };
+  S.powHist.hour = mk(60, i => 5.2 + Math.sin(i / 7) * 0.12 + (r0() - 0.5) * 0.18);
+  S.powHist.day = mk(288, i => { const h = i / 12; const on = !(h > 3.2 && h < 3.7); return on ? 5.1 + Math.sin(h) * 0.15 + (r0() - 0.5) * 0.2 : 0.4; });
+  S.powHist.week = mk(168, i => { const d = Math.floor(i / 24); const on = !(d === 2 && i % 24 > 13 && i % 24 < 16); return on ? 5.15 + Math.cos(i / 9) * 0.12 + (r0() - 0.5) * 0.16 : 0.4; });
+})();
+
+// spectrum bins, log spaced 20..2000 Hz
+const NB = 180, FMIN = 20, FMAX = 2000;
+const freqs = Array.from({ length: NB }, (_, i) => FMIN * Math.pow(FMAX / FMIN, i / (NB - 1)));
+let baseline = [], noiseSeed = 7;
+function makeBaseline(dom, level, seed){
+  const r = rng(seed); const peaks = [[dom, level, 0.035], [dom * 2, level - 10.5, 0.04], [dom * 3, level - 16, 0.045], [60, 52, 0.03], [1000, 47.5, 0.09], [dom * 4, level - 21, 0.05]];
+  return freqs.map(f => {
+    let v = 43 - 7.5 * Math.log10(f / FMIN) + Math.sin(f / 37) * 0.8 + (r() - 0.5) * 1.6;
+    peaks.forEach(([pf, pl, w]) => { const d = Math.log10(f / pf); v = Math.max(v, pl - (d * d) / (w * w) * 4.2 * pl / 60 * 60 / pl * 10); });
+    return v;
+  });
+}
+function cancelledFrom(base, att, blend){
+  return base.map((v, i) => {
+    const f = freqs[i];
+    const near = (pf, w) => Math.exp(-Math.pow(Math.log10(f / pf) / w, 2));
+    const drop = att * near(S.domFreq, 0.03) + att * 0.55 * near(S.domFreq * 2, 0.035) + att * 0.28 * near(S.domFreq * 3, 0.04);
+    return v - drop * blend;
+  });
+}
+baseline = makeBaseline(120, 66.6, 11);
+let current = cancelledFrom(baseline, 12.4, 1);
+
+/* ---------- generic line chart ---------- */
+function lineChart(root, cfg){
+  const svg = el('svg', {}, root); const tip = $('.tip', root);
+  const g = { grid: el('g', { class: 'axis' }, svg), series: el('g', {}, svg), marks: el('g', {}, svg), hover: el('g', {}, svg) };
+  const hit = el('rect', { fill: 'transparent' }, svg);
+  const cross = el('line', { stroke: 'rgba(238,243,239,.35)', 'stroke-width': 1 }, g.hover);
+  const dots = [];
+  let W = 0, H = 0, data = cfg.series, xs = cfg.x;
+  const pad = { l: 58, r: 16, t: 12, b: 28 };
+  const sx = v => pad.l + (cfg.xlog ? (Math.log10(v) - Math.log10(cfg.xmin)) / (Math.log10(cfg.xmax) - Math.log10(cfg.xmin)) : (v - cfg.xmin) / (cfg.xmax - cfg.xmin)) * (W - pad.l - pad.r);
+  const sy = v => pad.t + (1 - (v - cfg.ymin) / (cfg.ymax - cfg.ymin)) * (H - pad.t - pad.b);
+  function axes(){
+    g.grid.textContent = '';
+    cfg.yticks.forEach(t => { el('line', { x1: pad.l, x2: W - pad.r, y1: sy(t), y2: sy(t) }, g.grid); el('text', { x: pad.l - 8, y: sy(t) + 3, 'text-anchor': 'end' }, g.grid).textContent = t + (cfg.yunit || ''); });
+    el('line', { class: 'base', x1: pad.l, x2: W - pad.r, y1: sy(cfg.ymin), y2: sy(cfg.ymin) }, g.grid);
+    cfg.xticks.forEach(t => { const x = sx(t.v); el('line', { x1: x, x2: x, y1: sy(cfg.ymin), y2: sy(cfg.ymin) + 4, class: 'base' }, g.grid); el('text', { x, y: H - 8, 'text-anchor': 'middle' }, g.grid).textContent = t.label; });
+
+  }
+  function path(vals){ let d = ''; for (let i = 0; i < vals.length; i++) d += (i ? ' L' : 'M') + sx(xs[i]).toFixed(1) + ' ' + sy(vals[i]).toFixed(1); return d; }
+  const paths = data.map(s => { if (s.area) el('path', { fill: s.color, opacity: .12, class: 'area', 'data-id': s.id }, g.series); return el('path', { fill: 'none', stroke: s.color, 'stroke-width': s.width || 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', 'data-id': s.id }, g.series); });
+  data.forEach(() => dots.push(el('circle', { r: 4, fill: 'var(--panel)', 'stroke-width': 2 }, g.hover)));
+  function draw(){
+    data.forEach((s, i) => { const d = path(s.values); paths[i].setAttribute('d', d); const a = $(`.area[data-id="${s.id}"]`, g.series); if (a) a.setAttribute('d', d + ` L${sx(xs[xs.length - 1]).toFixed(1)} ${sy(cfg.ymin)} L${sx(xs[0]).toFixed(1)} ${sy(cfg.ymin)} Z`); });
+    if (cfg.marks || cfg.thresholds) g.marks.textContent = '';
+    if (cfg.marks) { cfg.marks().forEach(m => { const x = sx(m.x); el('rect', { x: x - 10, y: pad.t, width: 20, height: H - pad.t - pad.b, fill: 'var(--dawn)', opacity: .1 }, g.marks); el('line', { x1: x, x2: x, y1: pad.t, y2: sy(cfg.ymin), stroke: 'var(--dawn)', 'stroke-width': 1, opacity: .6 }, g.marks); const t = el('text', { x: x + 6, y: pad.t + 12, style: 'fill:var(--dawn);font-family:var(--mono);font-size:11px' }, g.marks); t.textContent = m.label; if (m.y != null) el('circle', { cx: x, cy: sy(m.y), r: 5, fill: 'var(--dawn)', stroke: 'var(--panel)', 'stroke-width': 2 }, g.marks); }); }
+    if (cfg.thresholds) cfg.thresholds().forEach(t => { const y = sy(clamp(t.v, cfg.ymin, cfg.ymax)); el('line', { x1: pad.l, x2: W - pad.r, y1: y, y2: y, stroke: t.color, 'stroke-width': 1.5, 'stroke-dasharray': '6 5', opacity: .9 }, g.marks); const tx = el('text', { x: W - pad.r - 4, y: y - 5, 'text-anchor': 'end', style: `fill:${t.color};font-family:var(--mono);font-size:10px` }, g.marks); tx.textContent = t.label; });
+    if (cfg.onDraw) cfg.onDraw(data);
+  }
+  function resize(){
+    const r = root.getBoundingClientRect(); if (!r.width) return;
+    W = r.width; H = r.height; svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('width', W); svg.setAttribute('height', H);
+    hit.setAttribute('x', pad.l); hit.setAttribute('y', pad.t); hit.setAttribute('width', Math.max(0, W - pad.l - pad.r)); hit.setAttribute('height', Math.max(0, H - pad.t - pad.b));
+    axes(); draw();
+  }
+  function hoverAt(clientX){
+    const rect = svg.getBoundingClientRect(); const px = clientX - rect.left;
+    let best = 0, bd = 1e9; for (let i = 0; i < xs.length; i++) { const d = Math.abs(sx(xs[i]) - px); if (d < bd) { bd = d; best = i; } }
+    const x = sx(xs[best]);
+    cross.setAttribute('x1', x); cross.setAttribute('x2', x); cross.setAttribute('y1', pad.t); cross.setAttribute('y2', sy(cfg.ymin));
+    tip.textContent = ''; const h = document.createElement('b'); h.textContent = cfg.xfmt(xs[best]); tip.appendChild(h);
+    data.forEach((s, i) => { dots[i].setAttribute('cx', x); dots[i].setAttribute('cy', sy(s.values[best])); dots[i].setAttribute('stroke', s.color); const row = document.createElement('div'); const k = document.createElement('span'); const key = document.createElement('i'); key.className = 'k'; key.style.background = s.color; k.appendChild(key); k.appendChild(document.createTextNode(s.name)); const v = document.createElement('strong'); v.style.color = 'var(--text-primary)'; v.textContent = cfg.yfmt(s.values[best]); row.appendChild(k); row.appendChild(v); tip.appendChild(row); });
+    tip.style.display = 'block'; g.hover.style.display = '';
+    const tw = tip.offsetWidth; tip.style.left = (x + 14 + tw > W ? x - tw - 14 : x + 14) + 'px'; tip.style.top = (pad.t + 8) + 'px';
+  }
+  function hoverOff(){ tip.style.display = 'none'; g.hover.style.display = 'none'; }
+  hit.addEventListener('pointermove', e => hoverAt(e.clientX)); hit.addEventListener('pointerleave', hoverOff);
+  hit.setAttribute('tabindex', '0'); hit.setAttribute('role', 'img'); hit.setAttribute('aria-label', cfg.aria || 'chart');
+  let fi = 0; hit.addEventListener('keydown', e => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { fi = clamp(fi + (e.key === 'ArrowRight' ? 4 : -4), 0, xs.length - 1); hoverAt(svg.getBoundingClientRect().left + sx(xs[fi])); e.preventDefault(); } }); hit.addEventListener('blur', hoverOff);
+  hoverOff();
+  new ResizeObserver(resize).observe(root); resize();
+  return { resize, update(newSeries, newXs){ if (newXs) xs = newXs; newSeries.forEach((s, i) => data[i].values = s); draw(); }, setX(newXs, newSeries){ xs = newXs; newSeries.forEach((s, i) => data[i].values = s); resize(); } };
+}
+
+const spectrum = lineChart($('#spectrum'), {
+  x: freqs, xmin: FMIN, xmax: FMAX, xlog: true, ymin: 20, ymax: 80,
+  xticks: [20, 50, 100, 200, 500, 1000, 2000].map(v => ({ v, label: v >= 1000 ? (v / 1000) + 'k' : String(v) })),
+  yticks: [20, 30, 40, 50, 60, 70, 80], yunit: ' dB',
+  xfmt: v => fmt(v, 0) + ' Hz', yfmt: v => fmt(v, 1) + ' dB', aria: 'Live noise spectrum, baseline against current',
+  series: [{ id: 'base', name: 'Baseline, ANC off', color: '#7f8a86', width: 1.8, values: baseline }, { id: 'cur', name: 'Current', color: '#2f9fc7', width: 2.2, values: current }],
+  marks: () => { const i = freqs.findIndex(f => f >= S.domFreq); return [{ x: S.domFreq, label: S.domFreq + ' Hz dominant', y: current[i] }]; }
+});
+
+let powRange = 'hour';
+const powX = { hour: Array.from({ length: 60 }, (_, i) => i), day: Array.from({ length: 288 }, (_, i) => i), week: Array.from({ length: 168 }, (_, i) => i) };
+const powCfg = {
+  hour: { xmax: 59, xticks: [0, 15, 30, 45, 59].map(v => ({ v, label: v === 59 ? 'now' : (59 - v) + ' min' })), xfmt: v => (59 - v) + ' min ago' },
+  day: { xmax: 287, xticks: [0, 72, 144, 216, 287].map(v => ({ v, label: v === 287 ? 'now' : Math.round((287 - v) / 12) + ' h' })), xfmt: v => ((287 - v) / 12).toFixed(1) + ' h ago' },
+  week: { xmax: 167, xticks: [0, 24, 48, 72, 96, 120, 144, 167].map(v => ({ v, label: v === 167 ? 'now' : Math.round((167 - v) / 24) + ' d' })), xfmt: v => ((167 - v) / 24).toFixed(1) + ' d ago' }
+};
+const powChartCfg = { x: powX.hour, xmin: 0, xmax: 59, ymin: 0, ymax: 8, yticks: [0, 2, 4, 6, 8], yunit: ' W', xticks: powCfg.hour.xticks, xfmt: powCfg.hour.xfmt, yfmt: v => fmt(v, 2) + ' W', aria: 'System power history', series: [{ id: 'p', name: 'System power', color: '#2f9fc7', width: 2, area: true, values: S.powHist.hour }] };
+const power = lineChart($('#powerChart'), powChartCfg);
+function setPowRange(r){ powRange = r; Object.assign(powChartCfg, { xmax: powCfg[r].xmax, xticks: powCfg[r].xticks, xfmt: powCfg[r].xfmt }); power.setX(powX[r], [S.powHist[r]]); }
+
+/* sparkline for attenuation */
+function spark(svg, vals){
+  const W = 200, H = 28; svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.textContent = '';
+  const mn = Math.min(...vals) - 0.2, mx = Math.max(...vals) + 0.2;
+  const pts = vals.map((v, i) => [i / (vals.length - 1) * W, H - 2 - (v - mn) / (mx - mn) * (H - 4)]);
+  el('path', { d: pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' '), fill: 'none', stroke: '#7f8a86', 'stroke-width': 1.5 }, svg);
+  const last = pts[pts.length - 1]; el('circle', { cx: last[0], cy: last[1], r: 3, fill: '#2f9fc7' }, svg);
+}
+
+/* ---------- compliance profiles ---------- */
+const PROFILES = [
+  { id: 'pwc', name: 'Prince William County, VA', day: 60, night: 55, nightStart: 22, nightEnd: 7, weekendNight: false, official: 'Prince William County noise officer', phone: '+1 703 555 0142' },
+  { id: 'divide', name: 'Divide County, ND', day: 50, night: 45, nightStart: 22, nightEnd: 7, weekendNight: false, official: 'Divide County zoning administrator', phone: '+1 701 555 0187' },
+  { id: 'penn', name: 'PennFuture model ordinance', day: 55, night: 50, nightStart: 20, nightEnd: 7, weekendNight: true, official: 'Township code enforcement officer', phone: '+1 412 555 0166' }
+];
+let profile = PROFILES[0];
+const profSel = $('#profile');
+PROFILES.forEach(p => { const o = document.createElement('option'); o.value = p.id; o.textContent = p.name; profSel.appendChild(o); });
+profSel.addEventListener('change', () => { profile = PROFILES.find(p => p.id === profSel.value); renderContacts(); tickUI(true); });
+const CONTACTS = () => [
+  { who: profile.official, phone: profile.phone, role: 'government' },
+  { who: 'Site manager, Gainesville Enclosure 1', phone: '+1 571 555 0199', role: 'operator' }
+];
+function renderContacts(){ const c = $('#contacts'); c.textContent = ''; CONTACTS().forEach(k => { const d = document.createElement('div'); d.className = 'contact'; const a = document.createElement('b'); a.textContent = k.who; const b = document.createElement('span'); b.textContent = k.phone; d.appendChild(a); d.appendChild(b); c.appendChild(d); }); }
+renderContacts();
+function isNight(d){
+  if (S.forceNight) return true;
+  const h = d.getHours(), wd = d.getDay();
+  if (profile.weekendNight && (wd === 0 || wd === 6)) return true;
+  return h >= profile.nightStart || h < profile.nightEnd;
+}
+function sendSms(kind, level, limit, when){
+  const key = kind; if (S.lastSms[key] && when - S.lastSms[key] < 60000) return;
+  S.lastSms[key] = when;
+  const log = $('#alertLog'); if (log.firstChild && !log.firstChild.dataset.real) log.textContent = '';
+  CONTACTS().forEach(c => {
+    const li = document.createElement('li'); li.dataset.real = '1';
+    const b = document.createElement('b'); b.textContent = `SMS to ${c.who} ${c.phone} at ${new Date(when).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+    const m = document.createElement('span'); m.className = 'msg';
+    m.textContent = kind === 'test'
+      ? `THRESHOLD test: Gainesville Enclosure 1 reporting ${fmt(level)} dBA against a ${limit} dBA limit (${profile.name}). No action needed.`
+      : `THRESHOLD ALERT: Gainesville Enclosure 1 at ${fmt(level)} dBA, above the ${limit} dBA ${isNight(new Date(when)) ? 'night' : 'day'} limit (${profile.name}). Mitigation is at maximum. Please respond.`;
+    li.appendChild(b); li.appendChild(m); log.prepend(li); S.smsCount++;
+  });
+  $('#logCount').textContent = S.smsCount + ' sent';
+  // Production hook: POST {to, body} to an SMS gateway (Twilio) from a small server. The prototype logs instead.
+}
+$('#simExceed').addEventListener('click', () => { S.event = { until: Date.now() + 14000, add: 7.2, name: 'generator test' }; tickUI(true); });
+$('#testSms').addEventListener('click', () => { const lim = isNight(new Date()) ? profile.night : profile.day; sendSms('test', currentLevel(), lim, Date.now()); });
+$('#nightToggle').addEventListener('click', e => { S.forceNight = !S.forceNight; e.currentTarget.setAttribute('aria-checked', S.forceNight); tickUI(true); });
+
+/* ---------- controls: ANC toggle and baseline capture ---------- */
+$('#ancToggle').addEventListener('click', e => { S.anc = !S.anc; e.currentTarget.setAttribute('aria-checked', S.anc); $('span:last-child', e.currentTarget).textContent = S.anc ? 'ANC on' : 'ANC off'; if (S.anc) S.ancSince = Date.now(); });
+$('#captureBtn').addEventListener('click', () => {
+  const r = rng(Date.now() & 0xffff);
+  S.domFreq = Math.round(118 + r() * 4); S.baseLevel = +(66.2 + r() * 0.9).toFixed(1); S.attTarget = +(12.1 + r() * 0.6).toFixed(1);
+  baseline = makeBaseline(S.domFreq, S.baseLevel, Date.now() & 0xffff);
+  const f = $('#captureFlash'); f.textContent = 'Baseline captured ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }); f.classList.add('on'); setTimeout(() => f.classList.remove('on'), 3200);
+  tickUI(true);
+});
+
+/* ---------- live loop ---------- */
+const rl = rng(99);
+function currentLevel(){ const add = S.event && Date.now() < S.event.until ? S.event.add : 0; return S.baseLevel - S.att * S.blend + add; }
+function setStatus(elm, cls, text){ elm.className = 'status' + (cls ? ' ' + cls : ''); elm.lastChild.textContent = text; }
+let lastSec = 0;
+function tickUI(force){
+  const now = Date.now();
+  // ease blend toward anc state
+  const tgt = S.anc ? 1 : 0; S.blend += (tgt - S.blend) * (reduced ? 1 : 0.36); if (Math.abs(S.blend - tgt) < 0.004) S.blend = tgt;
+  S.att += (S.attTarget + (rl() - 0.5) * 0.14 - S.att) * 0.2;
+  const pw = S.anc ? 5.2 + Math.sin(now / 9000) * 0.12 + (rl() - 0.5) * 0.08 : S.standby;
+  S.power += (pw - S.power) * 0.4;
+  if (S.event && now > S.event.until) S.event = null;
+  current = cancelledFrom(baseline, S.att, S.blend).map(v => v + (rl() - 0.5) * 0.5);
+  spectrum.update([baseline, current]);
+  const level = currentLevel();
+  // stat row
+  const attShown = S.att * S.blend;
+  $('#attVal').textContent = fmt(attShown); $('#resVal').textContent = fmt(level); $('#powVal').textContent = fmt(S.power);
+  $('#resDelta').textContent = 'baseline ' + fmt(S.baseLevel) + ' dBA' + (S.event ? ', ' + S.event.name + ' running' : '');
+  $('#powDelta').textContent = (attShown > 0.1 ? fmt(attShown / S.power, 2) : '0.00') + ' dB per watt';
+  setStatus($('#ancStatus'), S.anc ? '' : 'warn', S.anc ? 'Active' : 'Standby');
+  const mins = Math.floor((now - S.ancSince) / 60000); $('#ancSince').textContent = S.anc ? `running ${Math.floor(mins / 60)}h ${mins % 60}m` : 'cancellation paused';
+  // compliance
+  const d = new Date(now); const night = isNight(d); const lim = night ? profile.night : profile.day; const margin = lim - level;
+  const st = margin < 0 ? 'bad' : margin < 1.5 ? 'warn' : '';
+  setStatus($('#thrStatus'), st, margin < 0 ? 'Above configured limit' : margin < 1.5 ? 'Near configured limit' : 'Below configured limit');
+  $('#thrDelta').textContent = `${lim} dBA ${night ? 'night' : 'day'}, ${profile.name}`;
+  $('#pDay').textContent = profile.day + ' dBA'; $('#pNight').textContent = profile.night + ' dBA'; $('#pNow').textContent = lim + ' dBA' + (S.forceNight ? ' (night, forced)' : '');
+  $('#pLevel').textContent = fmt(level) + ' dBA'; $('#pMargin').textContent = margin >= 0 ? fmt(margin) + ' dB below threshold' : fmt(-margin) + ' dB above threshold';
+  setStatus($('#pStatus'), st, margin < 0 ? 'Exceeding configured threshold' : margin < 1.5 ? 'Within threshold, margin thin' : 'Within configured threshold');
+  const meter = $('#pMeter'); meter.className = 'meter' + (st ? ' ' + st : ''); $('i', meter).style.width = clamp(level / lim * 100, 0, 100).toFixed(1) + '%';
+  $('#pClock').textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + (night ? ' night profile' : ' day profile');
+  $('#pBase').textContent = fmt(S.baseLevel + (S.event ? S.event.add : 0)) + ' dBA'; $('#pWith').textContent = fmt(level) + ' dBA';
+  // once per second: exceedance logic, energy, history, tables
+  if (force || now - lastSec >= 1000) {
+    lastSec = now;
+    if (margin < 0) { S.streak++; if (S.streak === 3) { S.exceedances++; sendSms('alert', level, lim, now); } } else S.streak = 0;
+    $('#pCount').textContent = S.exceedances;
+    const w = $('#warnings'); w.textContent = '';
+    const add = (cls, text) => { const li = document.createElement('li'); li.className = cls; li.textContent = text; w.appendChild(li); };
+    if (margin < 0) add('bad', `Level ${fmt(level)} dBA is above the ${lim} dBA limit in force. Cancellation is at maximum${S.event ? ' (' + S.event.name + ')' : ''}.`);
+    else if (margin < 1.5) add('', `Margin is ${fmt(margin)} dB. Night limit ${profile.night} dBA leaves little room.`);
+    if (!S.anc) add('bad', `ANC is off. Baseline ${fmt(S.baseLevel)} dBA exceeds the ${profile.night} dBA night limit.`);
+    if (night && S.anc && margin >= 1.5) add('ok', 'Night profile active. Mitigation active, level under the limit in force.');
+    if (!w.children.length) add('ok', 'No warnings. Mitigation active, level under the limit in force.');
+    // energy
+    const midnight = new Date(d); midnight.setHours(0, 0, 0, 0); const hours = (now - midnight) / 3600000;
+    const wh = S.power * hours; const kwhDay = S.power * 24 / 1000; const price = S.price;
+    $('#ePow').textContent = fmt(S.power) + ' W'; $('#eToday').textContent = wh >= 1000 ? fmt(wh / 1000, 2) + ' kWh' : fmt(wh) + ' Wh';
+    $('#eCost').textContent = money(kwhDay * price, 3); $('#eEff').textContent = (attShown > 0.1 ? fmt(attShown / S.power, 2) : '0.00') + ' dB/W'; $('#ePrice').textContent = money(price, 2) + '/kWh';
+    $('#fNow').textContent = money(S.power / 1000 * price, 4) + '/h'; $('#fDay').textContent = money(kwhDay * price, 3); $('#fMonth').textContent = money(kwhDay * price * 30, 2);
+    $('#fDbh').textContent = attShown > 0.1 ? money(S.power / 1000 * price / attShown, 5) : 'n/a';
+    // history
+    S.powHist.hour.push(S.power); S.powHist.hour.shift(); if (powRange === 'hour') power.update([S.powHist.hour]);
+    if (now % 60000 < 1100) { S.powHist.day.push(S.power); S.powHist.day.shift(); }
+    S.attHist.push(attShown); S.attHist.shift(); spark($('#sparkAtt'), S.attHist);
+    // table
+    $('#cDom').textContent = S.domFreq + ' Hz'; $('#cCan').textContent = S.anc ? S.domFreq + ' Hz' : 'idle'; $('#cPh').textContent = S.anc ? '180°' : 'idle';
+    $('#cBase').textContent = fmt(S.baseLevel) + ' dBA'; $('#cRes').textContent = fmt(level) + ' dBA'; $('#cAtt').textContent = fmt(attShown) + ' dB'; $('#cStat').textContent = S.anc ? 'Active' : 'Standby';
+    postTick.forEach(f => { try { f({ level, lim, night, att: attShown, margin, power: S.power, status: st }); } catch (_) {} });
+  }
+}
+$('#price').addEventListener('input', e => { const v = parseFloat(e.target.value); if (v > 0) { S.price = v; tickUI(true); } });
+function avoided(){ const f = +$('#fence').value || 0, b = +$('#barrier').value || 0, c = +$('#claim').value || 0, p = clamp(+$('#prob').value || 0, 0, 100) / 100; $('#aBarrier').textContent = money(f * b); $('#aClaim').textContent = money(c * p); $('#aTotal').textContent = money(f * b + c * p); }
+['fence', 'barrier', 'claim', 'prob'].forEach(id => $('#' + id).addEventListener('input', avoided)); avoided();
+tickUI(true);
+let loopId = null, refreshMs = 500;
+function loop(){ if (!document.hidden && refreshMs) tickUI(false); loopId = setTimeout(loop, refreshMs || 1000); }
+loop();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) tickUI(true); });
+
+/* ---------- site intelligence ---------- */
+const FACTORS = [
+  { id: 'res', name: 'Distance from residential communities', w: 25 },
+  { id: 'land', name: 'Existing land use or brownfield status', w: 20 },
+  { id: 'grid', name: 'Grid and power availability', w: 15 },
+  { id: 'water', name: 'Water stress', w: 15 },
+  { id: 'hab', name: 'Wildlife and habitat sensitivity', w: 10 },
+  { id: 'amb', name: 'Existing ambient noise', w: 10 },
+  { id: 'fiber', name: 'Proximity to fiber infrastructure', w: 5 }
+];
+const PRESETS = { balanced: [25, 20, 15, 15, 10, 10, 5], ai: [12, 12, 32, 10, 6, 6, 22], community: [34, 18, 6, 22, 14, 6, 0] };
+// each candidate: disruption factor values 0..100 (higher = more disruption on that factor), plus capacity and metadata
+const REGIONS = {
+  'Northern Virginia': { ghi: 4.4, biome: 'forest', center: [38.79, -77.55], zoom: 9, city: 'Washington, DC', cityLL: [38.90, -77.04], cands: [
+    { name: 'Existing industrial zone A', place: 'Manassas rail corridor', ll: [38.745, -77.51], f: { res: 22, land: 8, grid: 18, water: 40, hab: 14, amb: 10, fiber: 8 }, mw: 300, acres: 140, km: 52 },
+    { name: 'Brownfield zone B', place: 'Former quarry, Gainesville', ll: [38.80, -77.62], f: { res: 30, land: 14, grid: 42, water: 42, hab: 20, amb: 30, fiber: 20 }, mw: 180, acres: 210, km: 64 },
+    { name: 'Rural parcel C', place: 'Catlett farmland', ll: [38.64, -77.63], f: { res: 68, land: 82, grid: 70, water: 55, hab: 80, amb: 88, fiber: 55 }, mw: 90, acres: 600, km: 78 },
+    { name: 'Exurban parcel D', place: 'Bristow edge', ll: [38.72, -77.55], f: { res: 84, land: 60, grid: 36, water: 44, hab: 40, amb: 62, fiber: 14 }, mw: 200, acres: 120, km: 58 },
+    { name: 'Logistics park E', place: 'Dulles South', ll: [38.93, -77.52], f: { res: 40, land: 12, grid: 30, water: 38, hab: 10, amb: 12, fiber: 4 }, mw: 240, acres: 95, km: 44 }
+  ] },
+  'Central Ohio': { ghi: 4.1, biome: 'plains', center: [40.05, -83.05], zoom: 9, city: 'Columbus, OH', cityLL: [39.96, -83.00], cands: [
+    { name: 'Existing industrial zone A', place: 'Rickenbacker logistics area', ll: [39.81, -82.93], f: { res: 26, land: 10, grid: 24, water: 22, hab: 12, amb: 8, fiber: 12 }, mw: 260, acres: 180, km: 22 },
+    { name: 'Brownfield zone B', place: 'Former steel site, Marion', ll: [40.58, -83.12], f: { res: 34, land: 16, grid: 40, water: 20, hab: 18, amb: 34, fiber: 30 }, mw: 150, acres: 240, km: 78 },
+    { name: 'Rural parcel C', place: 'Madison County cropland', ll: [39.90, -83.45], f: { res: 60, land: 84, grid: 48, water: 26, hab: 66, amb: 90, fiber: 40 }, mw: 200, acres: 900, km: 46 },
+    { name: 'Exurban parcel D', place: 'New Albany edge', ll: [40.10, -82.78], f: { res: 80, land: 58, grid: 22, water: 24, hab: 36, amb: 58, fiber: 6 }, mw: 320, acres: 160, km: 26 },
+    { name: 'Airport industrial E', place: 'Springfield, Clark County', ll: [39.84, -83.84], f: { res: 44, land: 18, grid: 44, water: 24, hab: 20, amb: 20, fiber: 26 }, mw: 120, acres: 130, km: 72 }
+  ] },
+  'North Texas': { ghi: 5.2, biome: 'plains', center: [32.95, -97.05], zoom: 9, city: 'Dallas, TX', cityLL: [32.78, -96.80], cands: [
+    { name: 'Existing industrial zone A', place: 'Alliance corridor, Fort Worth', ll: [32.99, -97.30], f: { res: 28, land: 10, grid: 20, water: 62, hab: 14, amb: 10, fiber: 8 }, mw: 400, acres: 220, km: 40 },
+    { name: 'Brownfield zone B', place: 'Former refinery land, Ellis County', ll: [32.39, -96.85], f: { res: 32, land: 12, grid: 34, water: 66, hab: 22, amb: 26, fiber: 28 }, mw: 220, acres: 300, km: 52 },
+    { name: 'Rural parcel C', place: 'Wise County ranchland', ll: [33.22, -97.60], f: { res: 58, land: 86, grid: 60, water: 80, hab: 72, amb: 92, fiber: 60 }, mw: 140, acres: 1200, km: 85 },
+    { name: 'Exurban parcel D', place: 'Frisco north edge', ll: [33.22, -96.83], f: { res: 90, land: 62, grid: 30, water: 60, hab: 30, amb: 56, fiber: 10 }, mw: 260, acres: 110, km: 45 },
+    { name: 'Rail yard E', place: 'Midlothian industrial', ll: [32.48, -96.99], f: { res: 36, land: 14, grid: 26, water: 64, hab: 18, amb: 14, fiber: 22 }, mw: 180, acres: 160, km: 42 }
+  ] },
+  'Central Arizona': { ghi: 6.5, biome: 'arid', center: [33.45, -112.0], zoom: 9, city: 'Phoenix, AZ', cityLL: [33.45, -112.07], cands: [
+    { name: 'Existing industrial zone A', place: 'Goodyear industrial park', ll: [33.40, -112.38], f: { res: 30, land: 12, grid: 26, water: 88, hab: 12, amb: 12, fiber: 10 }, mw: 350, acres: 200, km: 30 },
+    { name: 'Brownfield zone B', place: 'Former smelter land, Casa Grande', ll: [32.88, -111.72], f: { res: 28, land: 14, grid: 38, water: 92, hab: 24, amb: 28, fiber: 30 }, mw: 200, acres: 400, km: 75 },
+    { name: 'Rural parcel C', place: 'Desert parcel, Tonopah', ll: [33.48, -112.95], f: { res: 20, land: 70, grid: 44, water: 96, hab: 76, amb: 94, fiber: 64 }, mw: 300, acres: 1500, km: 85 },
+    { name: 'Exurban parcel D', place: 'Chandler edge', ll: [33.24, -111.78], f: { res: 88, land: 60, grid: 18, water: 86, hab: 28, amb: 52, fiber: 6 }, mw: 280, acres: 90, km: 35 },
+    { name: 'Airport industrial E', place: 'Mesa Gateway', ll: [33.30, -111.66], f: { res: 46, land: 18, grid: 30, water: 88, hab: 20, amb: 16, fiber: 14 }, mw: 220, acres: 170, km: 40 }
+  ] },
+  'Eastern North Dakota': { ghi: 4.3, biome: 'plains', center: [47.2, -97.3], zoom: 8, city: 'Fargo, ND', cityLL: [46.88, -96.79], cands: [
+    { name: 'Existing industrial zone A', place: 'West Fargo industrial', ll: [46.87, -96.92], f: { res: 34, land: 12, grid: 32, water: 18, hab: 16, amb: 14, fiber: 20 }, mw: 160, acres: 150, km: 12 },
+    { name: 'Brownfield zone B', place: 'Former sugar plant, Hillsboro', ll: [47.40, -97.06], f: { res: 30, land: 16, grid: 46, water: 16, hab: 20, amb: 40, fiber: 44 }, mw: 100, acres: 260, km: 62 },
+    { name: 'Rural parcel C', place: 'Prairie parcel, Steele County', ll: [47.45, -97.75], f: { res: 26, land: 88, grid: 66, water: 14, hab: 84, amb: 96, fiber: 72 }, mw: 80, acres: 1800, km: 95 },
+    { name: 'Exurban parcel D', place: 'Grand Forks edge', ll: [47.95, -97.10], f: { res: 74, land: 56, grid: 40, water: 16, hab: 34, amb: 60, fiber: 24 }, mw: 140, acres: 130, km: 120 },
+    { name: 'Power plant adjacent E', place: 'Near Cass County substation', ll: [46.75, -97.10], f: { res: 38, land: 20, grid: 12, water: 18, hab: 26, amb: 18, fiber: 30 }, mw: 260, acres: 320, km: 28 }
+  ] },
+  'Southeast Wisconsin': { ghi: 4.0, biome: 'forest', center: [42.75, -88.0], zoom: 9, city: 'Milwaukee, WI', cityLL: [43.04, -87.91], cands: [
+    { name: 'Existing industrial zone A', place: 'Kenosha industrial corridor', ll: [42.60, -87.95], f: { res: 32, land: 10, grid: 26, water: 16, hab: 14, amb: 12, fiber: 12 }, mw: 240, acres: 190, km: 55 },
+    { name: 'Brownfield zone B', place: 'Former foundry, Racine', ll: [42.72, -87.82], f: { res: 44, land: 14, grid: 30, water: 14, hab: 16, amb: 20, fiber: 16 }, mw: 160, acres: 120, km: 40 },
+    { name: 'Rural parcel C', place: 'Walworth County farmland', ll: [42.66, -88.45], f: { res: 62, land: 86, grid: 58, water: 18, hab: 70, amb: 90, fiber: 52 }, mw: 120, acres: 800, km: 70 },
+    { name: 'Exurban parcel D', place: 'Mount Pleasant edge', ll: [42.71, -87.91], f: { res: 92, land: 64, grid: 24, water: 14, hab: 32, amb: 54, fiber: 8 }, mw: 300, acres: 210, km: 38 },
+    { name: 'Rail served E', place: 'Sturtevant', ll: [42.70, -87.90], f: { res: 48, land: 18, grid: 28, water: 16, hab: 18, amb: 22, fiber: 14 }, mw: 200, acres: 140, km: 40 }
+  ] }
+};
+const regionSel = $('#region');
+Object.keys(REGIONS).forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = k; regionSel.appendChild(o); });
+regionSel.value = 'Northern Virginia';
+
+// weights ui
+const wrap = $('#weights');
+FACTORS.forEach((f, i) => {
+  const d = document.createElement('div'); d.className = 'w';
+  const lab = document.createElement('label'); lab.htmlFor = 'w-' + f.id; lab.appendChild(document.createTextNode(f.name)); const b = document.createElement('b'); b.textContent = f.w + '%'; lab.appendChild(b);
+  const inp = document.createElement('input'); inp.type = 'range'; inp.min = 0; inp.max = 50; inp.value = f.w; inp.id = 'w-' + f.id; inp.setAttribute('aria-label', f.name + ' weight');
+  const box = document.createElement('div'); box.appendChild(lab); box.appendChild(inp);
+  const out = document.createElement('output'); out.htmlFor = 'w-' + f.id; out.textContent = f.w; d.appendChild(box); d.appendChild(out); wrap.appendChild(d);
+  inp.addEventListener('input', () => { f.w = +inp.value; b.textContent = out.textContent = f.w + '%'; $$('#presets button').forEach(x => x.setAttribute('aria-pressed', 'false')); rank(); });
+});
+$$('#presets button').forEach(btn => btn.addEventListener('click', () => { PRESETS[btn.dataset.p].forEach((v, i) => { FACTORS[i].w = v; const inp = $('#w-' + FACTORS[i].id); inp.value = v; $('b', inp.previousSibling).textContent = v + '%'; inp.parentNode.nextSibling.textContent = v; }); $$('#presets button').forEach(x => x.setAttribute('aria-pressed', x === btn)); rank(); }));
+
+function scoreCandidate(c, inp){
+  const total = FACTORS.reduce((a, f) => a + f.w, 0) || 1;
+  const adj = { ...c.f };
+  adj.res = clamp(adj.res * inp.noiseSens, 0, 100);
+  adj.hab = clamp(adj.hab * inp.ecoSens, 0, 100);
+  adj.water = clamp(adj.water * (inp.cooling === 'evap' ? 1.25 : inp.cooling === 'liquid' ? 0.8 : 0.9) * (inp.water > 2000 ? 1.15 : 1), 0, 100);
+  adj.grid = clamp(adj.grid * inp.powerAvail + (c.mw < inp.mw ? (inp.mw - c.mw) / inp.mw * 60 : 0), 0, 100);
+  adj.fiber = clamp(adj.fiber * inp.latency, 0, 100);
+  adj.land = clamp(adj.land + (c.acres < inp.acres * inp.expand ? 20 : 0), 0, 100);
+  // on-site solar: usable share of the parcel, at roughly 0.4 MW dc per acre,
+  // against the facility's own round-the-clock draw
+  const ghi = (REGIONS[inp.region].ghi || 4.4) * (1 - (c.f.hab / 100) * 0.12);
+  const solarMw = c.acres * 0.4 * 0.4;
+  const solarMwhDay = solarMw * ghi * 0.8;
+  const loadMwhDay = inp.mw * 24;
+  const offset = loadMwhDay > 0 ? (solarMwhDay / loadMwhDay) * 100 : 0;
+  const parts = FACTORS.map(f => ({ id: f.id, name: f.name, contrib: adj[f.id] * f.w / total, raw: adj[f.id] }));
+  let disruption = parts.reduce((a, p) => a + p.contrib, 0);
+  const tooFar = c.km > inp.dist;
+  if (tooFar) disruption = Math.min(100, disruption + 12);
+  return { ...c, adj, parts, disruption, suitability: Math.round(100 - disruption), tooFar,
+           ghi, solarMw, solarMwhDay, offset };
+}
+const band = v => v < 33 ? ['Low', 'lo'] : v < 60 ? ['Medium', 'md'] : ['High', 'hi'];
+const gridBand = v => v < 33 ? ['High', 'lo'] : v < 60 ? ['Medium', 'md'] : ['Low', 'hi'];
+function readInputs(){ return { mw: +$('#mw').value || 1, acres: +$('#acres').value || 1, region: regionSel.value, dist: +$('#dist').value || 1, powerAvail: +$('#powerAvail').value, cooling: $('#cooling').value, water: +$('#water').value || 0, latency: +$('#latency').value, expand: +$('#expand').value, noiseSens: +$('#noiseSens').value, ecoSens: +$('#ecoSens').value }; }
+let ranked = [];
+function rank(){
+  const inp = readInputs(); const reg = REGIONS[inp.region];
+  ranked = reg.cands.map(c => scoreCandidate(c, inp)).sort((a, b) => a.disruption - b.disruption);
+  $('#wsum').textContent = 'Total ' + FACTORS.reduce((a, f) => a + f.w, 0) + (FACTORS.reduce((a, f) => a + f.w, 0) === 100 ? '' : ' (normalized to 100 when scoring)');
+  const tb = $('#results tbody'); tb.textContent = '';
+  ranked.slice(0, 3).forEach((c, i) => {
+    const tr = document.createElement('tr'); const cell = (t, cls) => { const td = document.createElement('td'); if (cls) td.className = cls; td.textContent = t; tr.appendChild(td); return td; };
+    cell(String.fromCharCode(65 + i) + '. ' + c.name + (c.tooFar ? ' (beyond your distance limit)' : ''));
+    cell(c.suitability + '/100', 'num');
+    const t1 = band(c.adj.res); cell(t1[0]); const t2 = gridBand(c.adj.grid); cell(t2[0]); const t3 = band(c.adj.water); cell(t3[0]); const t4 = band(c.adj.hab); cell(t4[0]);
+    cell(fmt(c.disruption, 1), 'num'); tb.appendChild(tr);
+  });
+  renderCards(); updateMap();
+}
+// which of the three generated site models fits this parcel
+function siteKind(name){
+  if (/brownfield|former|quarry/i.test(name)) return 'brown';
+  if (/rural|exurban|farm|prairie|desert parcel|ranch/i.test(name)) return 'rural';
+  return 'industrial';
+}
+function siteRender(c, i){
+  // an isometric model of a facility on its parcel: size follows MW, greenery follows habitat, houses follow residential proximity
+  const r = rng(i * 7 + 3); const W = 400, H = 250; const s = clamp(0.6 + c.mw / 400, 0.6, 1.3);
+  const hab = c.adj.hab, res = c.adj.res, water = c.adj.water;
+  const ground = water > 70 ? '#8a7f5c' : hab > 60 ? '#3f6b46' : '#556b48';
+  let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Model of a facility at ${c.place}"><defs><linearGradient id="sk${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f3a4c"/><stop offset="1" stop-color="#587f8a"/></linearGradient></defs><rect width="${W}" height="${H}" fill="url(#sk${i})"/><rect y="120" width="${W}" height="${H}" fill="${ground}"/>`;
+  // road
+  svg += `<path d="M0 230 L${W} 150" stroke="#2c3236" stroke-width="10" fill="none"/><path d="M0 230 L${W} 150" stroke="#8d9296" stroke-width="1" stroke-dasharray="10 12" fill="none"/>`;
+  // trees by habitat
+  const nTrees = Math.round(hab / 6);
+  for (let t = 0; t < nTrees; t++) { const x = r() * W, y = 130 + r() * 110, k = 0.5 + r() * 0.8; svg += `<g transform="translate(${x.toFixed(0)} ${y.toFixed(0)}) scale(${k.toFixed(2)})"><rect x="-2" y="-12" width="4" height="14" fill="#3e2f22"/><circle cy="-16" r="9" fill="#2f5233"/></g>`; }
+  // houses by residential proximity
+  const nHouses = Math.round(res / 9);
+  for (let h = 0; h < nHouses; h++) { const x = 20 + r() * (W - 60), y = 128 + r() * 24; svg += `<g transform="translate(${x.toFixed(0)} ${y.toFixed(0)})"><rect width="14" height="9" fill="#c9c0ad"/><path d="M-1 0 L7 -6 L15 0Z" fill="#8c4a3c"/></g>`; }
+  // facility (isometric)
+  const bw = 150 * s, bd = 70 * s, bh = 36 * s, cx = 200, cy = 190;
+  const p = (x, y) => `${(cx + (x - y) * 0.87).toFixed(1)} ${(cy + (x + y) * 0.5).toFixed(1)}`;
+  svg += `<polygon points="${p(-bw / 2, -bd / 2)} ${p(bw / 2, -bd / 2)} ${p(bw / 2, bd / 2)} ${p(-bw / 2, bd / 2)}" fill="#000" opacity=".25" transform="translate(6 6)"/>`;
+  svg += `<polygon points="${p(-bw / 2, bd / 2)} ${p(bw / 2, bd / 2)} ${p(bw / 2, bd / 2)}" fill="none"/>`;
+  const top = `${p(-bw / 2, -bd / 2)} ${p(bw / 2, -bd / 2)} ${p(bw / 2, bd / 2)} ${p(-bw / 2, bd / 2)}`;
+  const shift = `translate(0 ${-bh})`;
+  svg += `<g><polygon points="${p(-bw / 2, bd / 2)} ${p(bw / 2, bd / 2)} ${p(bw / 2, bd / 2)} ${p(-bw / 2, bd / 2)}"/>`;
+  svg += `<polygon points="${p(-bw / 2, bd / 2)} ${p(bw / 2, bd / 2)} ${(cx + (bw / 2 - bd / 2) * 0.87).toFixed(1)} ${(cy + (bw / 2 + bd / 2) * 0.5 - bh).toFixed(1)} ${(cx + (-bw / 2 - bd / 2) * 0.87).toFixed(1)} ${(cy + (-bw / 2 + bd / 2) * 0.5 - bh).toFixed(1)}" fill="#8f979c"/>`;
+  svg += `<polygon points="${p(bw / 2, bd / 2)} ${p(bw / 2, -bd / 2)} ${(cx + (bw / 2 + bd / 2) * 0.87).toFixed(1)} ${(cy + (bw / 2 - bd / 2) * 0.5 - bh).toFixed(1)} ${(cx + (bw / 2 - bd / 2) * 0.87).toFixed(1)} ${(cy + (bw / 2 + bd / 2) * 0.5 - bh).toFixed(1)}" fill="#6d7579"/>`;
+  svg += `<polygon points="${top}" fill="#b4bbbf" transform="${shift}"/></g>`;
+  // rooftop units
+  const nu = Math.round(4 * s + 2);
+  for (let u = 0; u < nu; u++) { const x = -bw / 2 + 18 + u * (bw - 36) / (nu - 1), y = 0; const q = p(x, y).split(' '); svg += `<g transform="translate(${q[0]} ${(+q[1] - bh).toFixed(1)})"><rect x="-6" y="-8" width="12" height="8" fill="#5d656a"/><circle cy="-4" r="2.4" fill="#d8dde0"/></g>`; }
+  // THRESHOLD unit at the fence
+  svg += `<g transform="translate(${(cx + bw * 0.55).toFixed(0)} ${(cy + 26).toFixed(0)})"><rect x="-6" y="-5" width="12" height="9" rx="2" fill="#15221f" stroke="#5ec98a" stroke-width="1"/><circle cx="3" cy="1" r="1.2" fill="#5ec98a"/></g>`;
+  // substation if grid ready
+  if (c.adj.grid < 40) svg += `<g transform="translate(60 205)"><rect width="26" height="14" fill="#5d656a"/><line x1="4" y1="0" x2="4" y2="-10" stroke="#8f979c"/><line x1="13" y1="0" x2="13" y2="-10" stroke="#8f979c"/><line x1="22" y1="0" x2="22" y2="-10" stroke="#8f979c"/></g>`;
+  svg += '</svg>';
+  return svg;
+}
+function renderCards(){
+  const box = $('#cards'); box.textContent = '';
+  ranked.slice(0, 3).forEach((c, i) => {
+    const card = document.createElement('article'); card.className = 'panel cand';
+    const h = document.createElement('h3'); h.appendChild(document.createTextNode(String.fromCharCode(65 + i) + '. ' + c.name)); const sc = document.createElement('span'); sc.textContent = c.suitability + '/100'; h.appendChild(sc); card.appendChild(h);
+    const place = document.createElement('p'); place.className = 'note'; place.style.margin = '0'; place.textContent = `${c.place}. ${c.km} km from ${REGIONS[regionSel.value].city}. Grid ${c.mw} MW, parcel ${c.acres} acres.`; card.appendChild(place);
+    const solar = document.createElement('div'); solar.className = 'solar';
+    const sIcon = document.createElement('span'); sIcon.className = 'sun'; sIcon.setAttribute('aria-hidden', 'true');
+    const sText = document.createElement('span');
+    sText.textContent = `${fmt(c.ghi, 1)} kWh/m² per day. On-site solar could offset ${fmt(c.offset, 1)}% of the load.`;
+    solar.appendChild(sIcon); solar.appendChild(sText); card.appendChild(solar);
+    const gm = document.createElement('a'); gm.className = 'gmap'; gm.href = `https://www.google.com/maps/search/?api=1&query=${c.ll[0]},${c.ll[1]}`; gm.target = '_blank'; gm.rel = 'noopener noreferrer'; gm.textContent = `Open ${c.ll[0].toFixed(3)}, ${c.ll[1].toFixed(3)} in Google Maps`; card.appendChild(gm);
+    const rd = document.createElement('div'); rd.className = 'render';
+    // a generated model of a facility of this kind in this biome, with the drawn parcel as fallback
+    const biome = REGIONS[regionSel.value].biome || 'plains';
+    const img = document.createElement('img');
+    img.src = `assets/sites/${biome}-${siteKind(c.name)}.jpg`; img.loading = 'lazy'; img.decoding = 'async';
+    img.alt = `Model of a facility at ${c.place}. Not a photograph of the parcel.`;
+    img.addEventListener('error', () => { rd.textContent = ''; rd.innerHTML = siteRender(c, i); }, { once: true });
+    rd.appendChild(img); card.appendChild(rd);
+    const tags = document.createElement('div'); tags.className = 'tags';
+    [['Community impact', band(c.adj.res)], ['Grid readiness', gridBand(c.adj.grid)], ['Water stress', band(c.adj.water)], ['Habitat impact', band(c.adj.hab)]].forEach(([k, v]) => { const t = document.createElement('span'); t.className = 'tag ' + v[1]; t.textContent = k + ': ' + v[0]; tags.appendChild(t); });
+    card.appendChild(tags);
+    const m = document.createElement('div'); m.className = 'meter'; const mi = document.createElement('i'); mi.style.width = c.suitability + '%'; m.appendChild(mi); card.appendChild(m);
+    const bars = document.createElement('div'); bars.className = 'bars'; const lab = document.createElement('div'); lab.className = 'note'; lab.style.margin = '6px 0 0'; lab.textContent = 'Disruption score ' + fmt(c.disruption, 1) + ', by factor'; bars.appendChild(lab);
+    const maxc = Math.max(...c.parts.map(p => p.contrib), 1);
+    c.parts.forEach(p => { const row = document.createElement('div'); row.className = 'bar'; const n = document.createElement('span'); n.textContent = p.name; const tr = document.createElement('div'); const bi = document.createElement('i'); bi.style.width = (p.contrib / maxc * 100).toFixed(0) + '%'; tr.appendChild(bi); const v = document.createElement('b'); v.textContent = fmt(p.contrib, 1); row.appendChild(n); row.appendChild(tr); row.appendChild(v); bars.appendChild(row); });
+    card.appendChild(bars); box.appendChild(card);
+  });
+}
+
+// ---------- self-contained map (no external tiles, works offline) ----------
+const mercY = lat => Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360));
+function hashStr(str){ let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+const THEME = {
+  map: { land: '#1d2b26', land2: '#24352e', forest: '#2c4636', water: '#1b3b४a'.replace('४','4'), urban: '#3a4144', road: '#4c5552', minor: '#39423f', grid: 'rgba(238,243,239,.05)', ring: '#5ec98a' },
+  sat: { land: '#38402a', land2: '#434b31', forest: '#2a3a22', water: '#16323f', urban: '#5a5d59', road: '#6a6b60', minor: '#565849', grid: 'rgba(238,243,239,.03)', ring: '#7fdba4' }
+};
+const BIOME = {
+  forest: { trees: 17, lakes: 1, river: 1, map: { land: '#1d2b26', land2: '#24352e' }, sat: { land: '#38402a', land2: '#434b31' } },
+  plains: { trees: 6, lakes: 1, river: 1, map: { land: '#232c20', land2: '#2b3527' }, sat: { land: '#4a4f2c', land2: '#565b33' } },
+  arid: { trees: 3, lakes: 0, river: 0, map: { land: '#2a2519', land2: '#332d20', forest: '#3a3a24' }, sat: { land: '#5c4e34', land2: '#6a5b3d', forest: '#4d4a2c' } }
+};
+let basemap = 'map', mapCands = [];
+function renderMap(){
+  const host = $('#map'); if (!host) return;
+  const reg = REGIONS[regionSel.value];
+  const W = Math.max(320, host.clientWidth), H = Math.max(260, host.clientHeight);
+  const bio = BIOME[reg.biome] || BIOME.plains;
+  const T = Object.assign({}, THEME[basemap], bio[basemap] || {});
+  const r = rng(hashStr(regionSel.value));
+  [...host.querySelectorAll('svg')].forEach(n => n.remove());
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img' });
+  svg.setAttribute('aria-label', `Map of ${reg.cands.length} candidate parcels near ${reg.city}. Top three: ` + mapCands.slice(0, 3).map((c, i) => `${String.fromCharCode(65 + i)}, ${c.place}, suitability ${c.suitability} of 100`).join('. '));
+  // --- projection fit ---
+  const pts = mapCands.map(c => c.ll).concat([reg.cityLL]);
+  let minLat = Math.min(...pts.map(p => p[0])), maxLat = Math.max(...pts.map(p => p[0]));
+  let minLon = Math.min(...pts.map(p => p[1])), maxLon = Math.max(...pts.map(p => p[1]));
+  const padLat = Math.max(0.12, (maxLat - minLat) * 0.3), padLon = Math.max(0.12, (maxLon - minLon) * 0.3);
+  minLat -= padLat; maxLat += padLat; minLon -= padLon; maxLon += padLon;
+  const x0 = minLon * Math.PI / 180, xSpan = (maxLon - minLon) * Math.PI / 180;
+  const yTop = mercY(maxLat), ySpan = yTop - mercY(minLat);
+  const sc = Math.min(W / xSpan, H / ySpan);
+  const offX = (W - xSpan * sc) / 2, offY = (H - ySpan * sc) / 2;
+  const px = lon => offX + (lon * Math.PI / 180 - x0) * sc;
+  const py = lat => offY + (yTop - mercY(lat)) * sc;
+  const P = ll => [px(ll[1]), py(ll[0])];
+  // --- land ---
+  el('rect', { width: W, height: H, fill: T.land }, svg);
+  for (let i = 0; i < 9; i++) {
+    const cx = r() * W, cy = r() * H, rx = (40 + r() * 150), ry = (30 + r() * 90);
+    el('ellipse', { cx: cx.toFixed(0), cy: cy.toFixed(0), rx: rx.toFixed(0), ry: ry.toFixed(0), fill: T.land2, opacity: .55 }, svg);
+  }
+  // --- fields (satellite) or county grid (map) ---
+  if (basemap === 'sat') {
+    for (let i = 0; i < 46; i++) {
+      const w = 22 + r() * 52, h = 16 + r() * 40, fx = r() * W, fy = r() * H;
+      el('rect', { x: fx.toFixed(0), y: fy.toFixed(0), width: w.toFixed(0), height: h.toFixed(0), fill: r() > .5 ? '#4b5531' : '#3d4628', opacity: (.3 + r() * .3).toFixed(2), transform: `rotate(${(r() * 8 - 4).toFixed(1)} ${fx.toFixed(0)} ${fy.toFixed(0)})` }, svg);
+    }
+  } else {
+    const gstep = (maxLon - minLon) / 8;
+    for (let lon = minLon; lon <= maxLon; lon += gstep) el('line', { x1: px(lon), x2: px(lon), y1: 0, y2: H, stroke: T.grid, 'stroke-width': 1 }, svg);
+    for (let lat = minLat; lat <= maxLat; lat += gstep) el('line', { x1: 0, x2: W, y1: py(lat), y2: py(lat), stroke: T.grid, 'stroke-width': 1 }, svg);
+  }
+  // --- forest patches ---
+  for (let i = 0; i < bio.trees; i++) {
+    const cx = r() * W, cy = r() * H, k = 14 + r() * 46;
+    const g = el('g', { opacity: (.5 + r() * .35).toFixed(2) }, svg);
+    for (let b = 0; b < 4; b++) el('ellipse', { cx: (cx + (r() - .5) * k).toFixed(0), cy: (cy + (r() - .5) * k * .6).toFixed(0), rx: (k * (.4 + r() * .5)).toFixed(0), ry: (k * (.3 + r() * .35)).toFixed(0), fill: T.forest }, g);
+  }
+  // --- river and lake ---
+  if (bio.river) {
+    const riv = el('path', { fill: 'none', stroke: T.water, 'stroke-width': (3 + r() * 3).toFixed(1), 'stroke-linecap': 'round' }, svg);
+    let ry0 = r() * H, d = `M-10 ${ry0.toFixed(0)}`;
+    for (let x = 0; x <= W + 20; x += W / 7) { ry0 += (r() - .5) * H * .42; ry0 = clamp(ry0, 10, H - 10); d += ` Q${(x + W / 14).toFixed(0)} ${(ry0 + (r() - .5) * 40).toFixed(0)} ${(x + W / 7).toFixed(0)} ${ry0.toFixed(0)}`; }
+    riv.setAttribute('d', d);
+  } else {
+    for (let i = 0; i < 3; i++) { let wx = r() * W, wy = r() * H, d = `M${wx.toFixed(0)} ${wy.toFixed(0)}`; for (let k = 0; k < 5; k++) { wx += (r() - .3) * 90; wy += (r() - .5) * 70; d += ` L${wx.toFixed(0)} ${wy.toFixed(0)}`; } el('path', { d, fill: 'none', stroke: T.land2, 'stroke-width': 2, opacity: .8, 'stroke-linecap': 'round' }, svg); }
+  }
+  for (let i = 0; i < bio.lakes; i++) el('ellipse', { cx: (r() * W).toFixed(0), cy: (r() * H).toFixed(0), rx: (18 + r() * 34).toFixed(0), ry: (12 + r() * 22).toFixed(0), fill: T.water, opacity: .9 }, svg);
+  // --- metro area ---
+  const [cxm, cym] = P(reg.cityLL);
+  const urbanR = Math.max(34, Math.min(W, H) * 0.14);
+  const clipId = 'urb' + hashStr(regionSel.value);
+  const cp = el('clipPath', { id: clipId }, svg); el('circle', { cx: cxm, cy: cym, r: urbanR }, cp);
+  el('circle', { cx: cxm, cy: cym, r: urbanR, fill: T.urban, opacity: basemap === 'sat' ? .75 : .6 }, svg);
+  const streets = el('g', { 'clip-path': `url(#${clipId})`, stroke: T.road, 'stroke-width': 1.2, opacity: .5 }, svg);
+  const gstepPx = Math.max(7, urbanR / 5);
+  for (let i = -7; i <= 7; i++) { el('line', { x1: cxm + i * gstepPx, x2: cxm + i * gstepPx, y1: cym - urbanR, y2: cym + urbanR }, streets); el('line', { x1: cxm - urbanR, x2: cxm + urbanR, y1: cym + i * gstepPx, y2: cym + i * gstepPx }, streets); }
+  el('circle', { cx: cxm, cy: cym, r: urbanR, fill: 'none', stroke: T.road, 'stroke-width': 1, opacity: .45 }, svg);
+  // --- highways from metro to every parcel ---
+  mapCands.forEach(c => {
+    const [x, y] = P(c.ll); const mx = (cxm + x) / 2 + (r() - .5) * 40, my = (cym + y) / 2 + (r() - .5) * 40;
+    el('path', { d: `M${cxm.toFixed(0)} ${cym.toFixed(0)} Q${mx.toFixed(0)} ${my.toFixed(0)} ${x.toFixed(0)} ${y.toFixed(0)}`, fill: 'none', stroke: T.road, 'stroke-width': 2.2, opacity: .65, 'stroke-linecap': 'round' }, svg);
+  });
+  // --- city label ---
+  el('circle', { cx: cxm, cy: cym, r: 4, fill: '#eef3ef' }, svg);
+  const cl = el('text', { x: cxm + 9, y: cym + 4, class: 'lbl city' }, svg); cl.textContent = reg.city;
+  // --- parcels ---
+  const labelJobs = [], taken = [{ x: cxm + 9, y: cym + 4, w: reg.city.length * 7 + 14, h: 15 }];
+  mapCands.forEach((c, i) => {
+    const top = i < 3; const [x, y] = P(c.ll);
+    const parcelPx = clamp(Math.sqrt(c.acres * 4047 / Math.PI) / (6378137 * Math.cos(c.ll[0] * Math.PI / 180)) * sc * 3, 11, 46);
+    el('circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: parcelPx.toFixed(1), fill: top ? 'rgba(94,201,138,.16)' : 'rgba(127,138,134,.12)', stroke: top ? T.ring : '#7f8a86', 'stroke-width': 1.2 }, svg);
+    const g = el('g', { class: 'pin' + (top ? '' : ' dim'), tabindex: '0', role: 'button' }, svg);
+    g.setAttribute('aria-label', `${c.name}, ${c.place}, suitability ${c.suitability} of 100`);
+    el('circle', { class: 'disc', cx: x.toFixed(1), cy: y.toFixed(1), r: top ? 15 : 8, fill: top ? 'var(--accent)' : 'var(--dim)', stroke: '#101a1c', 'stroke-width': 3 }, g);
+    if (top) { const t = el('text', { x: x.toFixed(1), y: (y + 4.5).toFixed(1), 'text-anchor': 'middle' }, g); t.textContent = String.fromCharCode(65 + i); }
+    const above = i % 2 === 0;
+    const off = Math.max(parcelPx, top ? 15 : 8) + 11;
+    labelJobs.push({ x, y: y + (above ? -off : off + 5), text: c.place, above, pinY: y, pinR: off });
+    const show = () => {
+      const pop = $('#mapPop'); pop.textContent = '';
+      const b = document.createElement('b'); b.textContent = (top ? String.fromCharCode(65 + i) + '. ' : '') + c.name;
+      const sp = document.createElement('span'); sp.textContent = `${c.place}\nSuitability ${c.suitability}/100, disruption ${fmt(c.disruption, 1)}\n${c.mw} MW grid, ${c.acres} acres, ${c.km} km out`;
+      sp.style.whiteSpace = 'pre-line'; pop.appendChild(b); pop.appendChild(sp); pop.style.display = 'block';
+      const pw = pop.offsetWidth, ph = pop.offsetHeight;
+      pop.style.left = clamp(x + 20, 8, W - pw - 8) + 'px'; pop.style.top = clamp(y - ph / 2, 8, H - ph - 8) + 'px';
+    };
+    const hide = () => { $('#mapPop').style.display = 'none'; };
+    g.addEventListener('pointerenter', show); g.addEventListener('pointerleave', hide);
+    g.addEventListener('focus', show); g.addEventListener('blur', hide);
+  });
+  // --- labels, nudged clear of each other and of the pins ---
+  labelJobs.forEach(j => {
+    const w = j.text.length * 5.9 + 6, h = 14;
+    let y = j.y, guard = 0;
+    const hits = () => taken.some(t => Math.abs(t.x - j.x) < (t.w + w) / 2 && Math.abs(t.y - y) < (t.h + h) / 2);
+    while (hits() && guard++ < 8) y += j.above ? -15 : 15;
+    if (Math.abs(y - j.pinY) < j.pinR) y = j.pinY + (j.above ? -j.pinR : j.pinR + 5);
+    taken.push({ x: j.x, y, w, h });
+    const lab = el('text', { x: j.x.toFixed(1), y: y.toFixed(1), 'text-anchor': 'middle', class: 'lbl' }, svg); lab.textContent = j.text;
+  });
+  // --- scale bar ---
+  const kmPerPx = 6378.137 * Math.cos((minLat + maxLat) / 2 * Math.PI / 180) / sc;
+  const nice = [5, 10, 20, 25, 50, 100, 200].reduce((a, v) => Math.abs(v / kmPerPx - 120) < Math.abs(a / kmPerPx - 120) ? v : a, 5);
+  const barPx = nice / kmPerPx;
+  const sb = el('g', { class: 'scale', transform: `translate(${W - barPx - 22} ${H - 20})` }, svg);
+  el('line', { x1: 0, x2: barPx.toFixed(0), y1: 0, y2: 0, stroke: 'var(--text-secondary)', 'stroke-width': 2 }, sb);
+  el('line', { x1: 0, x2: 0, y1: -4, y2: 4, stroke: 'var(--text-secondary)', 'stroke-width': 2 }, sb);
+  el('line', { x1: barPx.toFixed(0), x2: barPx.toFixed(0), y1: -4, y2: 4, stroke: 'var(--text-secondary)', 'stroke-width': 2 }, sb);
+  const st = el('text', { x: (barPx / 2).toFixed(0), y: -8, 'text-anchor': 'middle' }, sb); st.textContent = nice + ' km';
+  // --- north arrow ---
+  const ro = el('g', { class: 'rose', transform: `translate(${W - 24} 28)` }, svg);
+  el('path', { d: 'M0 -14 L5 4 L0 0 L-5 4 Z', fill: 'var(--text-secondary)' }, ro);
+  const nt = el('text', { x: 0, y: 16, 'text-anchor': 'middle' }, ro); nt.textContent = 'N';
+  host.insertBefore(svg, host.firstChild);
+  $('#mapNote').textContent = basemap === 'sat' ? 'Parcels at real coordinates. Imagery is drawn, not photographic.' : 'Parcels at real coordinates. Terrain is drawn for scale and context.';
+  $('#mapSub').textContent = `top three parcels near ${reg.city}`;
+}
+function updateMap(){ mapCands = ranked; renderMap(); }
+function initMap(){ updateMap(); }
+$$('#basemap button').forEach(b => b.addEventListener('click', () => { basemap = b.dataset.b; $$('#basemap button').forEach(x => x.setAttribute('aria-pressed', x === b)); renderMap(); }));
+let mapRO = null;
+(function watchMap(){ const host = $('#map'); if (!host || !window.ResizeObserver) return; let w = 0; mapRO = new ResizeObserver(() => { const nw = host.clientWidth; if (Math.abs(nw - w) > 8) { w = nw; if (mapCands.length) renderMap(); } }); mapRO.observe(host); })();
+$('#runSite').addEventListener('click', rank);
+$$('#siteForm select, #siteForm input').forEach(i => i.addEventListener('change', rank));
+rank();
+
+
+/* ================= Grafana-style chrome ================= */
+const INSPECT = new Map();
+
+/* --- panel headers, hover menu, inspect drawer --- */
+function scrapePanel(pn, title){
+  const rows = [];
+  pn.querySelectorAll('.body table tbody tr').forEach(tr => { const c = [...tr.children].map(td => td.textContent.trim()); if (c.length >= 2) rows.push([c[0], c.slice(1).join(' ')]); });
+  pn.querySelectorAll('.body dl.kv').forEach(dl => { const kids = [...dl.children]; for (let i = 0; i < kids.length - 1; i++) if (kids[i].tagName === 'DT') rows.push([kids[i].textContent.trim(), (kids[i + 1] || {}).textContent.trim()]); });
+  pn.querySelectorAll('.body .stat').forEach(st => rows.push([st.querySelector('.label').textContent.trim(), st.querySelector('.value').textContent.trim()]));
+  return { title, columns: ['Field', 'Value'], rows };
+}
+function openDrawer(data){
+  const d = $('#drawer'); $('#drawerTitle').textContent = data.title;
+  const th = $('#drawerTable thead'), tb = $('#drawerTable tbody');
+  th.textContent = ''; tb.textContent = '';
+  const hr = document.createElement('tr');
+  data.columns.forEach((c, i) => { const e = document.createElement('th'); if (i) e.className = 'num'; e.textContent = c; hr.appendChild(e); });
+  th.appendChild(hr);
+  data.rows.forEach(r => { const tr = document.createElement('tr'); r.forEach((v, i) => { const td = document.createElement('td'); if (i) td.className = 'num'; td.textContent = v; tr.appendChild(td); }); tb.appendChild(tr); });
+  d.hidden = false; d.classList.add('open');
+  $('#drawerCsv').onclick = () => {
+    const esc = v => /[",\n]/.test(v) ? '"' + String(v).replace(/"/g, '""') + '"' : v;
+    const csv = [data.columns, ...data.rows].map(r => r.map(esc).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    const a = document.createElement('a'); a.href = url; a.download = data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '.csv'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  };
+}
+function closeDrawer(){ const d = $('#drawer'); d.classList.remove('open'); d.hidden = true; }
+$$('[data-dclose]').forEach(b => b.addEventListener('click', closeDrawer));
+addEventListener('keydown', e => { if (e.key === 'Escape') { closeDrawer(); $$('.pmenu-list.open').forEach(m => m.classList.remove('open')); $$('.picker.open').forEach(m => m.classList.remove('open')); } });
+
+$$('.panel').forEach(pn => {
+  const h = pn.querySelector(':scope > h2'); if (!h) return;
+  pn.classList.add('chrome');
+  const body = document.createElement('div'); body.className = 'body';
+  while (h.nextSibling) body.appendChild(h.nextSibling);
+  pn.appendChild(body);
+  const title = h.textContent.trim();
+  const btn = document.createElement('button'); btn.className = 'pmenu'; btn.type = 'button'; btn.textContent = '⋮';
+  btn.setAttribute('aria-label', 'Panel menu, ' + title); btn.setAttribute('aria-haspopup', 'true');
+  h.appendChild(btn);
+  const list = document.createElement('div'); list.className = 'pmenu-list'; pn.appendChild(list);
+  const item = (label, key, fn) => { const b = document.createElement('button'); b.type = 'button'; b.appendChild(document.createTextNode(label)); const k = document.createElement('span'); k.textContent = key; b.appendChild(k); b.addEventListener('click', () => { list.classList.remove('open'); fn(); }); list.appendChild(b); };
+  const data = () => (INSPECT.get(pn) ? INSPECT.get(pn)() : scrapePanel(pn, title));
+  item('Inspect data', 'i', () => openDrawer(data()));
+  item('Download CSV', 'd', () => { openDrawer(data()); $('#drawerCsv').click(); });
+  btn.addEventListener('click', e => { e.stopPropagation(); const was = list.classList.contains('open'); $$('.pmenu-list.open').forEach(m => m.classList.remove('open')); list.classList.toggle('open', !was); btn.setAttribute('aria-expanded', !was); });
+});
+addEventListener('click', () => { $$('.pmenu-list.open').forEach(m => m.classList.remove('open')); $$('.picker.open').forEach(m => m.classList.remove('open')); });
+
+/* --- time range and refresh pickers --- */
+function buildPicker(id, items, initial, onPick){
+  const root = $('#' + id), btn = $('button', root), ul = $('ul', root), label = $('span', btn);
+  let current = initial;
+  items.forEach(it => {
+    const li = document.createElement('li'); const b = document.createElement('button'); b.type = 'button'; b.textContent = it.label;
+    b.setAttribute('aria-current', it.label === current);
+    b.addEventListener('click', e => { e.stopPropagation(); current = it.label; label.textContent = it.label; $$('button', ul).forEach(x => x.setAttribute('aria-current', x === b)); root.classList.remove('open'); onPick(it); });
+    li.appendChild(b); ul.appendChild(li);
+  });
+  btn.addEventListener('click', e => { e.stopPropagation(); const was = root.classList.contains('open'); $$('.picker.open').forEach(m => m.classList.remove('open')); root.classList.toggle('open', !was); btn.setAttribute('aria-expanded', !was); });
+}
+buildPicker('timePicker', [{ label: 'Last 1 hour', r: 'hour' }, { label: 'Last 24 hours', r: 'day' }, { label: 'Last 7 days', r: 'week' }], 'Last 1 hour', it => setPowRange(it.r));
+buildPicker('refreshPicker', [{ label: 'Off', ms: 0 }, { label: '500ms', ms: 500 }, { label: '1s', ms: 1000 }, { label: '5s', ms: 5000 }, { label: '10s', ms: 10000 }], '500ms', it => { refreshMs = it.ms; });
+
+/* --- Grafana legend tables --- */
+function legendTable(hostId, rows, cols){
+  const host = $('#' + hostId); if (!host) return;
+  let t = $('table', host);
+  if (!t) {
+    t = document.createElement('table'); t.className = 'legendtab';
+    const th = document.createElement('thead'), tr = document.createElement('tr');
+    ['Series', ...cols.map(c => c.label)].forEach((c, i) => { const e = document.createElement('th'); e.textContent = c; tr.appendChild(e); });
+    th.appendChild(tr); t.appendChild(th); t.appendChild(document.createElement('tbody')); host.appendChild(t);
+  }
+  const tb = $('tbody', t);
+  rows.forEach((r, i) => {
+    let tr = tb.children[i];
+    if (!tr) { tr = document.createElement('tr'); tr.appendChild(document.createElement('td')); cols.forEach(() => tr.appendChild(document.createElement('td'))); tb.appendChild(tr); }
+    const name = tr.children[0];
+    if (name.dataset.n !== r.name) { name.dataset.n = r.name; name.textContent = ''; const key = document.createElement('i'); key.style.background = r.color; name.appendChild(key); name.appendChild(document.createTextNode(r.name)); }
+    cols.forEach((c, j) => { const v = c.fn(r.values); const cell = tr.children[j + 1]; const txt = v == null ? 'n/a' : fmt(v, 1) + (r.unit || ''); if (cell.textContent !== txt) cell.textContent = txt; });
+  });
+}
+const STATS = { min: { label: 'Min', fn: v => Math.min(...v) }, max: { label: 'Max', fn: v => Math.max(...v) }, mean: { label: 'Mean', fn: v => v.reduce((a, b) => a + b, 0) / v.length }, last: { label: 'Last', fn: v => v[v.length - 1] } };
+
+/* --- sound level against the limit, a real time series --- */
+const LVLN = 120;
+const lvlHist = { base: new Array(LVLN).fill(66.6), res: new Array(LVLN).fill(54.2), lim: new Array(LVLN).fill(55) };
+const lvlX = Array.from({ length: LVLN }, (_, i) => i);
+let curLim = 55;
+const levelChart = lineChart($('#levelChart'), {
+  x: lvlX, xmin: 0, xmax: LVLN - 1, ymin: 35, ymax: 75, yticks: [35, 45, 55, 65, 75], yunit: ' dBA',
+  xticks: [0, 30, 60, 90, LVLN - 1].map(v => ({ v, label: v === LVLN - 1 ? 'now' : (LVLN - 1 - v) + 's' })),
+  xfmt: v => (LVLN - 1 - v) + ' s ago', yfmt: v => fmt(v, 1) + ' dBA', aria: 'Sound level over time against the limit in force',
+  series: [{ id: 'b', name: 'Baseline without THRESHOLD', color: '#7f8a86', width: 1.8, values: lvlHist.base }, { id: 'r', name: 'Measured with THRESHOLD', color: '#2f9fc7', width: 2.2, area: true, values: lvlHist.res }],
+  thresholds: () => [{ v: curLim, color: '#d03b3b', label: curLim + ' dBA limit' }]
+});
+
+/* --- stat panel threshold colours, Grafana style --- */
+const statColor = (sel, c) => { let e = $(sel); if (!e) return; e = e.closest('.value') || e; if (e.style.getPropertyValue('--sc') !== c) e.style.setProperty('--sc', c); };
+postTick.push(d => {
+  lvlHist.base.push(S.baseLevel + (S.event ? S.event.add : 0)); lvlHist.base.shift();
+  lvlHist.res.push(d.level); lvlHist.res.shift();
+  curLim = d.lim;
+  levelChart.update([lvlHist.base, lvlHist.res]);
+  legendTable('lvlLegend', [
+    { name: 'Baseline without THRESHOLD', color: '#7f8a86', values: lvlHist.base, unit: '' },
+    { name: 'Measured with THRESHOLD', color: '#2f9fc7', values: lvlHist.res, unit: '' }
+  ], [STATS.min, STATS.max, STATS.mean, STATS.last]);
+  legendTable('specLegend', [
+    { name: 'Baseline, ANC off', color: '#7f8a86', values: baseline },
+    { name: 'Current, ANC on', color: '#2f9fc7', values: current }
+  ], [STATS.min, STATS.max, STATS.mean]);
+  legendTable('powLegend', [{ name: 'System power', color: '#2f9fc7', values: S.powHist[powRange] }], [STATS.min, STATS.max, STATS.mean, STATS.last]);
+  const ok = '#5ec98a', warn = '#fab219', bad = '#d03b3b';
+  statColor('#attVal', d.att >= 10 ? ok : d.att >= 4 ? warn : bad);
+  statColor('#resVal', d.margin >= 1.5 ? ok : d.margin >= 0 ? warn : bad);
+  statColor('#powVal', S.power <= 7 ? ok : warn);
+  statColor('#ancStatus', S.anc ? ok : warn);
+  statColor('#thrStatus', d.status === 'bad' ? bad : d.status === 'warn' ? warn : ok);
+});
+
+/* --- richer inspectors for the charted panels --- */
+INSPECT.set($('#spectrum').closest('.panel'), () => ({
+  title: 'Live noise spectrum',
+  columns: ['Frequency (Hz)', 'Baseline (dB)', 'Current (dB)', 'Reduction (dB)'],
+  rows: freqs.map((f, i) => [fmt(f, 0), fmt(baseline[i], 1), fmt(current[i], 1), fmt(baseline[i] - current[i], 1)])
+}));
+INSPECT.set($('#powerChart').closest('.panel'), () => ({
+  title: 'Energy transparency',
+  columns: ['Sample', 'Power (W)'],
+  rows: S.powHist[powRange].map((v, i) => [powCfg[powRange].xfmt(i), fmt(v, 2)])
+}));
+INSPECT.set($('#levelChart').closest('.panel'), () => ({
+  title: 'Sound level against the limit',
+  columns: ['Time', 'Baseline (dBA)', 'With THRESHOLD (dBA)', 'Limit (dBA)'],
+  rows: lvlX.map(i => [(LVLN - 1 - i) + ' s ago', fmt(lvlHist.base[i], 1), fmt(lvlHist.res[i], 1), String(curLim)])
+}));
+INSPECT.set($('#results').closest('.panel'), () => ({
+  title: 'Recommended results',
+  columns: ['Candidate', 'Place', 'Suitability', 'Disruption', 'Community', 'Grid', 'Water', 'Habitat', 'Solar kWh/m2/day', 'On-site offset %'],
+  rows: ranked.map((c, i) => [(i < 3 ? String.fromCharCode(65 + i) + '. ' : '') + c.name, c.place, c.suitability + '/100', fmt(c.disruption, 1), band(c.adj.res)[0], gridBand(c.adj.grid)[0], band(c.adj.water)[0], band(c.adj.hab)[0], fmt(c.ghi, 1), fmt(c.offset, 1)])
+}));
+tickUI(true);
+
+/* restore tab */
+let savedTab = null; try { savedTab = localStorage.getItem('threshold.tab'); } catch (_) {}
+if (savedTab && $('#' + savedTab)) showTab(savedTab);
+})();
+</script>
+</body>
+</html>

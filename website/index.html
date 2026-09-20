@@ -1,0 +1,968 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>THRESHOLD</title>
+<meta name="description" content="Active noise cancellation for data centers. THRESHOLD finds the low-frequency hum, answers it with its inverse, and reports the readings against the ordinance that applies to you.">
+<meta name="theme-color" content="#0d1517">
+<!-- DEPLOY STEP: patch og:url and og:image with the live absolute URL before zipping -->
+<meta property="og:title" content="THRESHOLD. Quiet comes back to the fence line.">
+<meta property="og:description" content="Active noise cancellation for data centers, with the readings to prove it.">
+<meta property="og:url" content="https://example.com/">
+<meta property="og:image" content="https://example.com/assets/og.jpg">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230d1517'/%3E%3Cpath d='M8 32c6 0 6-14 12-14s6 28 12 28 6-28 12-28 6 14 12 14' fill='none' stroke='%235ec98a' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Figtree:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --canvas:#0d1517;--panel:#13201f;--panel-2:#182827;
+  --accent:#5ec98a;--accent-hover:#7fdba4;--accent-muted:rgba(94,201,138,.16);
+  --haze:#b9b1a3;--dawn:#e8c079;
+  --text-primary:#eef3ef;--text-secondary:#a7b3ad;--line:rgba(238,243,239,.10);--line-strong:rgba(238,243,239,.28);
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:Figtree,ui-sans-serif,system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --ease:cubic-bezier(.22,.61,.36,1);--ease2:cubic-bezier(.65,0,.35,1);
+  --tshadow:0 1px 2px rgba(5,8,10,.95),0 3px 12px rgba(5,8,10,.78),0 10px 44px rgba(5,8,10,.8);
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){color-scheme:dark}}
+:root[data-theme="dark"]{color-scheme:dark}
+*{box-sizing:border-box}
+html,body{overflow-x:hidden;overflow-x:clip}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--canvas);color:var(--text-primary);font-family:var(--body);font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased;opacity:0;animation:pagein 1.1s var(--ease) .05s forwards}
+@keyframes pagein{to{opacity:1}}
+a{color:inherit}
+h1,h2,h3{font-family:var(--display);font-weight:700;letter-spacing:-.02em;line-height:1.04;margin:0}
+p{margin:0}
+.skip{position:absolute;left:-9999px;top:8px;background:var(--accent);color:#08140c;padding:8px 12px;border-radius:8px;z-index:100}
+.skip:focus{left:8px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.mono{font-family:var(--mono)}
+.btn{display:inline-block;font:500 15px/1 var(--body);padding:14px 22px;border-radius:999px;border:1px solid var(--line-strong);color:var(--text-primary);background:transparent;text-decoration:none;cursor:pointer;transition:transform .5s var(--ease),background .5s var(--ease),border-color .5s var(--ease),color .5s var(--ease);text-shadow:none}
+.btn:hover{transform:translateY(-2px);border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#08140c}
+.btn.primary:hover{background:var(--accent-hover);border-color:var(--accent-hover);color:#08140c}
+@media (pointer:coarse){.btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center}}
+
+/* environment layer */
+.env{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.env .g1,.env .g2{position:absolute;inset:-20%;background:radial-gradient(ellipse 40% 50% at 30% 40%,rgba(94,201,138,.09),transparent 70%);animation:drift1 80s ease-in-out -30s infinite alternate}
+.env .g2{background:radial-gradient(ellipse 36% 46% at 70% 65%,rgba(232,192,121,.05),transparent 70%);animation:drift2 96s ease-in-out -50s infinite alternate}
+.env .grain{position:absolute;inset:0;opacity:.05;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+@keyframes drift1{to{transform:translate(6%,4%)}}
+@keyframes drift2{to{transform:translate(-5%,-6%)}}
+
+/* nav */
+.nav{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:14px clamp(16px,4vw,48px);transition:background .6s var(--ease),border-color .6s var(--ease)}
+.nav.solid{background:rgba(13,21,23,.82);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--display);font-weight:700;letter-spacing:.14em;font-size:15px}
+.brand svg{width:26px;height:26px}
+.nav ul{display:flex;gap:26px;list-style:none;margin:0;padding:0}
+.nav ul a{text-decoration:none;font-size:14px;color:var(--text-secondary);transition:color .4s var(--ease)}
+.nav ul a:hover{color:var(--text-primary)}
+.nav .btn{padding:10px 18px;font-size:14px}
+@media (max-width:720px){.nav ul{display:none}}
+
+/* hero */
+.hero{position:relative;height:640vh;z-index:1}
+.stage{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;--p:0;background:#3c4548}
+.stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .8s var(--ease);will-change:transform}
+.stage.video-ready video{opacity:1}
+/* The composed static hero, for the five gated cases. One JS-toggled class drives it,
+   set from the same GATES list the scrub decision uses, so the two can never disagree. */
+.statichero{position:absolute;inset:0;background:url('assets/hero-ending.jpg') center/cover no-repeat;display:none}
+html.gated .statichero{display:block}
+html.gated .hero{height:100vh;height:100svh}
+html.gated .scene,html.gated .hud,html.gated .cue,html.gated .ring{display:none}
+html.gated .band{top:auto;bottom:12vh}
+html.gated .band.b4{top:auto;bottom:10vh}
+html.gated .scrim{background:linear-gradient(0deg,rgba(6,10,12,.92) 0%,rgba(6,10,12,.8) 26%,rgba(6,10,12,.42) 48%,rgba(6,10,12,.1) 66%,rgba(6,10,12,.5) 100%)}
+/* The poster is the shot's first frame, and it stays put as the dead base layer.
+   The footage is revealed over it through a wavefront that opens outward from the
+   THRESHOLD unit, so the land does not fade back to life everywhere at once: the
+   quiet spreads from the device, which is the thing the page is actually claiming. */
+.poster{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity .9s var(--ease)}
+.stage.poster-on .poster{opacity:1}
+/* The radius is in vmax so the wavefront covers the same proportion of the frame at any
+   size. Roughly 95vmax reaches the far corner from the unit on a 16:9 viewport, which the
+   ramp hits around p 0.70, right as the payoff caption arrives; the cap covers squarer
+   windows. The 26vmax feather is what keeps the edge a spreading front rather than a
+   circle drawn on the screen. */
+.stage.has-video video{--mr:clamp(0,(var(--p) - .2)*190,135);
+  -webkit-mask-image:radial-gradient(circle at 11% 42%,#000 calc(var(--mr)*1vmax),transparent calc((var(--mr) + 26)*1vmax));
+  mask-image:radial-gradient(circle at 11% 42%,#000 calc(var(--mr)*1vmax),transparent calc((var(--mr) + 26)*1vmax))}
+.stage.has-video .scene .paint,.stage.has-video .scene .novideo{display:none}
+.scene .onvideo{display:none}
+.stage.has-video .scene .onvideo{display:inline}
+.scene{position:absolute;inset:0;width:100%;height:100%;display:block}
+/* The captions all live in the sky, so the base scrim grades the sky down from the top.
+   Read as haze rather than as a panel laid over the shot, and it carries the nav too. */
+.scrim{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(6,10,12,.78) 0%,rgba(6,10,12,.7) 20%,rgba(6,10,12,.5) 34%,rgba(6,10,12,.2) 46%,rgba(6,10,12,0) 58%),radial-gradient(ellipse 120% 90% at 50% 45%,rgba(8,12,14,0) 40%,rgba(8,12,14,.52) 100%)}
+.ring{position:absolute;left:50%;bottom:26px;width:34px;height:34px;margin-left:-17px;color:var(--accent);transform:rotate(-90deg);display:none}
+.stage.loading .ring{display:block}
+
+/* scene drives, all off --p */
+.scene .living{opacity:clamp(0,(var(--p) - .58)*3.3,1)}
+.scene .sun{opacity:clamp(0,(var(--p) - .72)*4,1)}
+.scene .rings{opacity:clamp(0,1 - (var(--p) - .5)*5.5,1)}
+.scene .barrenlife{opacity:clamp(0,1 - (var(--p) - .55)*4,1)}
+.scene .unit{opacity:clamp(0,(var(--p) - .42)*8,1)}
+.scene .led{opacity:clamp(0,(var(--p) - .44)*8,1)}
+.scene .inv{stroke-dashoffset:calc(var(--len,1000px) * (1 - clamp(0,(var(--p) - .46)*5.5,1)))}
+.scene .tuft{transform:scaleY(clamp(0,(var(--p) - var(--t,.6))*7,1));transform-box:fill-box;transform-origin:50% 100%}
+.scene .tree{transform:scale(clamp(0,(var(--p) - var(--t,.7))*5,1));transform-box:fill-box;transform-origin:50% 100%}
+.scene .bird{--kb:clamp(0,(var(--p) - var(--t,.8))*4,1);opacity:var(--kb);transform:translate(calc((1 - var(--kb))*var(--dx,160px)),calc((1 - var(--kb))*var(--dy,30px)))}
+.scene .deer{opacity:clamp(0,(var(--p) - .9)*10,1)}
+/* instrument layer over the footage: the hum, then the inverse that answers it */
+.scene .glow{filter:drop-shadow(0 0 7px rgba(94,201,138,.85)) drop-shadow(0 0 20px rgba(94,201,138,.45))}
+.scene .vrings{opacity:clamp(0,min(.34 + var(--p)*3, 1 - (var(--p) - .44)*5),1);filter:drop-shadow(0 0 6px rgba(10,14,16,.6))}
+.scene .vinv{stroke-dashoffset:calc(var(--vlen,1000px) * (1 - clamp(0,(var(--p) - .40)*4.4,1)));opacity:clamp(0,min((var(--p) - .38)*8, 1 - (var(--p) - .62)*5),1)}
+.scene .vnode{opacity:clamp(0,min((var(--p) - .38)*9, 1 - (var(--p) - .66)*5),1)}
+.stage.live .fan{animation:spin 1.4s linear infinite;transform-box:fill-box;transform-origin:center}
+.stage.live .hum{animation:hum 3.2s ease-out infinite;transform-box:fill-box;transform-origin:center}
+.stage.live .mote{animation:mote 9s ease-in-out infinite alternate;transform-box:fill-box;transform-origin:center}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes hum{0%{transform:scale(.15);opacity:.75}100%{transform:scale(1);opacity:0}}
+@keyframes mote{to{transform:translate(18px,-26px)}}
+
+/* caption bands */
+.band{position:absolute;top:16vh;left:clamp(16px,6vw,96px);max-width:min(720px,84vw);opacity:0;text-shadow:var(--tshadow);--k:0;z-index:3;pointer-events:none}
+.band::before{content:"";position:absolute;inset:-160% -56%;pointer-events:none;z-index:-1;opacity:calc(.25 + .75*var(--k,1));background:radial-gradient(ellipse 52% 30% at 50% 50%,rgba(5,8,10,.62) 0%,rgba(5,8,10,.42) 44%,rgba(5,8,10,0) 74%)}
+.band h1,.band h2{font-size:clamp(2.1rem,5.4vw,4.8rem);color:var(--text-primary)}
+.band .kick{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:14px;display:block}
+.band .sub{font-size:clamp(1rem,1.5vw,1.25rem);color:var(--text-secondary);max-width:46ch;margin-top:18px}
+.band .cta{margin-top:26px;pointer-events:auto}
+.band.b3{left:auto;right:clamp(16px,6vw,96px);text-align:right}
+.band.b3 .sub{margin-left:auto}
+.band.b4{left:50%;transform:translateX(-50%);text-align:center;max-width:min(1000px,92vw);top:13vh}
+.band.b4 h2{font-size:clamp(2rem,4.6vw,4.1rem)}
+.band.b4 .sub{margin-left:auto;margin-right:auto}
+.band .w{display:inline-block;white-space:nowrap}
+.band .c{display:inline-block}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.e-punch .w{--kc:clamp(0,(var(--k,0) - var(--th,0))*3,1);--ks:clamp(0,(var(--k,0) - var(--th,0) - var(--sd,.1))*var(--ss,3.2),1);opacity:var(--kc);transform:scale(calc(.6 + (.4 + var(--ov,.12))*var(--kc) - var(--ov,.12)*var(--ks)))}
+.e-punch .w.em{--ov:.24;--sd:.16;--ss:2.6}
+.e-drift .w{--kc:clamp(0,(var(--k,0) - var(--th,0))*2.8,1);opacity:var(--kc);transform:translateY(calc((1 - var(--kc))*-26px))}
+.e-halves .half{display:inline-block;--kc:clamp(0,(var(--k,0) - var(--th,0))*2.4,1);opacity:var(--kc);transform:translateX(calc((1 - var(--kc))*var(--jx,0px)))}
+.e-rise .w{--kc:clamp(0,(var(--k,0) - var(--th,0))*3,1);opacity:var(--kc);transform:translateY(calc((1 - var(--kc))*18px))}
+.e-rise .sub{--ks:clamp(0,(var(--k,0) - .62)*4,1);opacity:var(--ks);transform:translateY(calc((1 - var(--ks))*12px))}
+.e-rise .cta{--kb:clamp(0,(var(--k,0) - .76)*5,1);opacity:var(--kb);transform:translateY(calc((1 - var(--kb))*12px))}
+
+.chip{background:rgba(8,12,15,.55);border:1px solid rgba(120,140,130,.3);border-radius:10px;backdrop-filter:blur(10px);text-shadow:0 1px 3px rgba(5,5,10,.85)}
+.hud{position:absolute;left:clamp(16px,4vw,48px);bottom:28px;padding:10px 14px;font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--text-secondary);z-index:3;display:flex;gap:14px;align-items:baseline}
+.hud b{color:var(--text-primary);font-weight:500;font-size:15px}
+.hud .dot{width:8px;height:8px;border-radius:50%;background:var(--haze);display:inline-block;transition:background .6s var(--ease)}
+.stage.anc .hud .dot{background:var(--accent);box-shadow:0 0 12px var(--accent)}
+.cue{position:absolute;right:clamp(16px,4vw,48px);bottom:28px;font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--text-secondary);z-index:3;display:flex;align-items:center;gap:10px;opacity:calc(1 - clamp(0,var(--p)*18,1));transition:opacity .4s}
+.cue i{width:1px;height:34px;background:linear-gradient(var(--text-secondary),transparent);display:block;animation:cue 2.2s var(--ease) -0.8s infinite}
+@keyframes cue{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+@media (max-height:560px){.cue,.hud{display:none}}
+@media (max-width:720px){.hero{height:520vh}.band{top:13vh;max-width:92vw;left:16px}.band.b3{right:16px}.band h1,.band h2{font-size:2.2rem}.hud{bottom:18px}}
+
+/* sections */
+main{position:relative;z-index:2;background:var(--canvas)}
+.sec{padding:clamp(80px,12vw,150px) clamp(16px,6vw,96px);max-width:1240px;margin:0 auto;position:relative}
+.kick{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:16px}
+.sec h2{font-size:clamp(2rem,4.4vw,3.6rem);max-width:24ch;text-wrap:balance}
+.lede{font-size:clamp(1.05rem,1.4vw,1.25rem);color:var(--text-secondary);max-width:58ch;margin-top:22px}
+.card .part{opacity:0;transform:translateY(22px);transition:opacity .9s var(--ease),transform .9s var(--ease)}
+.card.in .part{opacity:1;transform:none}
+.card.in .part:nth-child(2){transition-delay:.1s}.card.in .part:nth-child(3){transition-delay:.2s}.card.in .part:nth-child(4){transition-delay:.3s}.card.in .part:nth-child(5){transition-delay:.4s}
+.card.in.settled .part:nth-child(n){transition-delay:0s}
+
+/* problem */
+.problem{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(32px,6vw,96px);align-items:end}
+.chips{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:36px}
+.stat{border:1px solid var(--line);border-radius:14px;padding:16px 18px;background:var(--panel);position:relative;overflow:hidden;min-width:0}
+.stat b{font-family:var(--display);font-size:1.6rem;display:block;letter-spacing:-.02em}
+.stat span{font-size:13px;color:var(--text-secondary)}
+.stat::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 20% 0%,var(--accent-muted),transparent 60%);opacity:0;transition:opacity .6s}
+.stat:hover::after{opacity:1}
+.quote{border-left:2px solid var(--accent);padding:6px 0 6px 22px;font-family:var(--display);font-weight:500;font-size:clamp(1.25rem,2vw,1.7rem);line-height:1.25;color:var(--text-primary)}
+.quote small{display:block;font-family:var(--mono);font-size:12px;color:var(--text-secondary);margin-top:14px;letter-spacing:.06em}
+@media (max-width:860px){.problem{grid-template-columns:1fr}.chips{grid-template-columns:1fr}}
+
+/* divider waveform */
+.divider{max-width:1240px;margin:0 auto;padding:0 clamp(16px,6vw,96px);height:90px}
+.divider svg{width:100%;height:90px;display:block;overflow:visible}
+.divider path{fill:none;stroke-width:1.5;stroke-linecap:round}
+.divider .humline{stroke:var(--haze);opacity:.5}
+.divider .invline{stroke:var(--accent);opacity:.8}
+
+/* how */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:56px}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px;position:relative;overflow:hidden;transition:transform .6s var(--ease),border-color .6s var(--ease)}
+.step:hover{transform:translateY(-4px);border-color:var(--line-strong)}
+.step .fig{height:120px;margin-bottom:18px}
+.step .fig svg{width:100%;height:100%;overflow:visible}
+.step h3{font-size:1.45rem;margin-bottom:10px}
+.step .n{font-family:var(--mono);font-size:12px;color:var(--accent);letter-spacing:.16em;margin-bottom:12px;display:block}
+.step p{color:var(--text-secondary);font-size:15.5px}
+.passive{margin-top:22px;color:var(--text-secondary);font-size:15px;border-top:1px solid var(--line);padding-top:18px;max-width:70ch}
+.card.in .step .pulse{animation:glow 5s ease-in-out -1.5s infinite}
+.step .pulse{opacity:.5}
+@keyframes glow{50%{opacity:1}}
+@media (max-width:860px){.steps{grid-template-columns:1fr}}
+
+/* hold moment */
+.hold{background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:clamp(22px,4vw,44px);display:grid;grid-template-columns:1.3fr .7fr;gap:clamp(22px,4vw,48px);align-items:center;margin-top:56px;position:relative;overflow:hidden}
+.hold .wave{width:100%;height:220px;display:block;overflow:visible}
+.hold .wave path{fill:none;stroke-width:2;stroke-linecap:round}
+.hold .wave .h{stroke:var(--haze);opacity:.55}
+.hold .wave .i{stroke:var(--accent);opacity:.85}
+.hold .wave .r{stroke:var(--text-primary);stroke-width:2.5}
+.holdbtn{width:100%;padding:18px 20px;border-radius:16px;border:1px solid var(--line-strong);background:var(--panel-2);color:var(--text-primary);font:500 16px var(--body);cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:none;position:relative;overflow:hidden;transition:border-color .5s var(--ease),transform .4s var(--ease)}
+.holdbtn:hover{border-color:var(--accent)}
+.holdbtn::before{content:"";position:absolute;left:0;top:0;bottom:0;width:100%;background:var(--accent-muted);transform:scaleX(var(--h,0));transform-origin:left;transition:transform .12s linear}
+.holdbtn:active{transform:scale(.99)}
+.hold.done .holdbtn{border-color:var(--accent);color:var(--accent)}
+.readout{font-family:var(--display);font-size:clamp(2.6rem,5vw,4.2rem);letter-spacing:-.03em;line-height:1;margin-bottom:6px}
+.readout small{font-family:var(--mono);font-size:14px;letter-spacing:.08em;color:var(--text-secondary);margin-left:8px}
+.hold .label{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--text-secondary);margin-bottom:16px;display:block}
+.lights{list-style:none;padding:0;margin:20px 0 0;display:grid;gap:8px}
+.lights li{display:flex;justify-content:space-between;font-family:var(--mono);font-size:13px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;color:var(--text-secondary);opacity:.45;transform:translateX(-6px);transition:opacity .6s var(--ease),transform .6s var(--ease),border-color .6s var(--ease),color .6s var(--ease)}
+.hold.done .lights li{opacity:1;transform:none;border-color:var(--accent);color:var(--text-primary)}
+.hold.done .lights li:nth-child(2){transition-delay:.18s}.hold.done .lights li:nth-child(3){transition-delay:.36s}
+.hold .hint{font-size:13px;color:var(--text-secondary);margin-top:12px}
+@media (max-width:860px){.hold{grid-template-columns:1fr}}
+
+/* impact */
+.impact{display:grid;grid-template-columns:.9fr 1.1fr;gap:clamp(32px,6vw,96px);align-items:center}
+.impact .art{border-radius:24px;overflow:hidden;border:1px solid var(--line);background:var(--panel);aspect-ratio:4/3;position:relative}
+.impact .art svg{width:100%;height:100%;display:block}
+/* the hero's resting frame, reused; the drawn panel underneath carries it if the file is missing */
+.impact .art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1}
+.impact .art img:not([src]),.impact .art img[src=""]{display:none}
+.figs{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:36px;align-items:start}
+.fig2 b{font-family:var(--display);font-size:clamp(1.6rem,2.4vw,2.3rem);letter-spacing:-.02em;display:block;line-height:1.05;text-wrap:balance}
+.fig2 span{font-size:14px;color:var(--text-secondary);display:block;margin-top:8px}
+.card.in .impact .bird2{animation:fly 7s ease-in-out -2s infinite alternate}
+@keyframes fly{to{transform:translate(14px,-8px)}}
+@media (max-width:860px){.impact{grid-template-columns:1fr}}
+
+/* compliance */
+table{width:100%;border-collapse:collapse;margin-top:36px;font-size:15px}
+th,td{text-align:left;padding:14px 12px;border-bottom:1px solid var(--line);vertical-align:baseline}
+th{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-secondary);font-weight:500}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.note{font-family:var(--mono);font-size:12px;color:var(--text-secondary);margin-top:18px;letter-spacing:.04em}
+
+/* pricing */
+.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:56px;align-items:stretch}
+.plan{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:28px;display:flex;flex-direction:column;gap:14px;position:relative;transition:transform .6s var(--ease),border-color .6s var(--ease)}
+.plan:hover{transform:translateY(-4px)}
+.plan.hi{border-color:var(--accent);background:linear-gradient(180deg,rgba(94,201,138,.08),transparent 60%),var(--panel)}
+.plan h3{font-size:1.4rem}
+.plan .price{font-family:var(--display);font-size:2rem;letter-spacing:-.02em}
+.plan .price small{display:block;font-family:var(--mono);font-size:12px;color:var(--text-secondary);letter-spacing:.06em;margin-top:6px;line-height:1.3}
+.plan p{color:var(--text-secondary);font-size:15px;flex:1}
+.plan ul{margin:0;padding:0;list-style:none;display:grid;gap:8px;font-size:14px;color:var(--text-secondary)}
+.plan li::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-right:10px;vertical-align:middle}
+.plan .tag{position:absolute;top:-12px;right:20px;font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;background:var(--accent);color:#08140c;padding:5px 10px;border-radius:999px}
+@media (max-width:860px){.plans{grid-template-columns:1fr}}
+
+/* faq */
+.faq{max-width:760px;margin-top:40px}
+details{border-top:1px solid var(--line);padding:18px 0}
+details:last-child{border-bottom:1px solid var(--line)}
+summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:baseline;gap:20px;font-family:var(--display);font-weight:500;font-size:1.15rem}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-family:var(--mono);color:var(--accent);transition:transform .5s var(--ease);flex:none}
+details[open] summary::after{transform:rotate(45deg)}
+details p{color:var(--text-secondary);margin-top:12px;max-width:62ch;animation:fadein .6s var(--ease)}
+@keyframes fadein{from{opacity:0;transform:translateY(-4px)}}
+
+/* closing */
+.close{text-align:center;padding-bottom:clamp(90px,12vw,160px)}
+.close h2{margin:0 auto;max-width:20ch;text-wrap:balance}
+.close .btn{margin-top:32px}
+
+footer{border-top:1px solid var(--line);padding:36px clamp(16px,6vw,96px);font-size:13px;color:var(--text-secondary);position:relative;z-index:2;background:var(--canvas)}
+footer .row{max-width:1240px;margin:0 auto;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;align-items:baseline}
+footer .disc{max-width:70ch;margin-top:14px}
+
+/* login modal */
+.modal{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;padding:16px}
+.modal.open{display:flex}
+.modal .back{position:absolute;inset:0;background:rgba(6,10,12,.7);backdrop-filter:blur(6px);animation:fadein .4s var(--ease)}
+.modal form{position:relative;width:min(440px,100%);background:var(--panel);border:1px solid var(--line-strong);border-radius:22px;padding:30px;display:grid;gap:14px;animation:rise .5s var(--ease)}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}}
+.modal h3{font-size:1.5rem}
+.modal label{font-size:13px;color:var(--text-secondary);display:grid;gap:6px}
+.modal input{font:15px var(--body);padding:12px 14px;border-radius:10px;border:1px solid var(--line-strong);background:var(--canvas);color:var(--text-primary)}
+.modal .small{font-size:12.5px;color:var(--text-secondary);font-family:var(--mono);letter-spacing:.02em}
+.modal .x{position:absolute;top:14px;right:14px;background:none;border:0;color:var(--text-secondary);font-size:20px;cursor:pointer;width:36px;height:36px;border-radius:50%}
+.modal .x:hover{color:var(--text-primary);background:var(--panel-2)}
+.modal .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;transition-delay:0s!important}
+  body{opacity:1}
+  .card .part{opacity:1;transform:none}
+  .stage{--p:1}
+  .band{opacity:0}
+  .band.b4{opacity:1;--k:1;transform:translateX(-50%)}
+  .cue{display:none}
+  .hold .lights li{opacity:1;transform:none;border-color:var(--accent);color:var(--text-primary)}
+  .band.b4 .w,.band.b4 .sub,.band.b4 .cta{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="env" aria-hidden="true"><div class="g1"></div><div class="g2"></div><div class="grain"></div></div>
+
+<header class="nav" id="nav">
+  <a class="brand" href="#top" aria-label="THRESHOLD home">
+    <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#13201f"/><path d="M8 32c6 0 6-14 12-14s6 28 12 28 6-28 12-28 6 14 12 14" fill="none" stroke="#5ec98a" stroke-width="4" stroke-linecap="round"/></svg>
+    THRESHOLD
+  </a>
+  <nav aria-label="Primary"><ul>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#impact">Impact</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+  </ul></nav>
+  <button class="btn" type="button" data-login>Log in</button>
+</header>
+
+<section class="hero" id="top" aria-label="Introduction">
+  <div class="stage" id="stage">
+    <div class="statichero" aria-hidden="true"></div>
+    <div class="poster" aria-hidden="true"></div>
+    <video id="heroVideo" preload="none" muted playsinline aria-hidden="true" tabindex="-1"></video>
+    <svg class="scene" id="scene" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="skyB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2f393c"/><stop offset=".55" stop-color="#5d625f"/><stop offset="1" stop-color="#8f8a7d"/></linearGradient>
+        <linearGradient id="skyL" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f4d6e"/><stop offset=".5" stop-color="#4f8fb8"/><stop offset="1" stop-color="#cfd9c2"/></linearGradient>
+        <linearGradient id="groundB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a7d68"/><stop offset="1" stop-color="#4e463b"/></linearGradient>
+        <linearGradient id="groundL" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6fa458"/><stop offset="1" stop-color="#27472a"/></linearGradient>
+        <radialGradient id="sunG"><stop offset="0" stop-color="#ffe9b0" stop-opacity=".95"/><stop offset=".35" stop-color="#e8c079" stop-opacity=".5"/><stop offset="1" stop-color="#e8c079" stop-opacity="0"/></radialGradient>
+        <pattern id="seams" width="40" height="150" patternUnits="userSpaceOnUse"><rect width="40" height="150" fill="none"/><line x1="39.5" y1="0" x2="39.5" y2="150" stroke="#8d949a" stroke-width="1"/></pattern>
+        <pattern id="louver" width="12" height="6" patternUnits="userSpaceOnUse"><line x1="0" y1="3" x2="12" y2="3" stroke="#6f777c" stroke-width="1.2"/></pattern>
+      </defs>
+      <!-- sky -->
+      <rect class="paint" width="1600" height="900" fill="url(#skyB)"/>
+      <rect class="paint living" width="1600" height="900" fill="url(#skyL)"/>
+      <circle class="paint sun" cx="1230" cy="230" r="150" fill="url(#sunG)"/>
+      <!-- far ridge -->
+      <path class="paint" d="M0 530 Q180 478 400 508 T820 490 T1200 516 T1600 480 V900 H0Z" fill="#5c5a53"/>
+      <path class="paint living" d="M0 530 Q180 478 400 508 T820 490 T1200 516 T1600 480 V900 H0Z" fill="#3f6b46"/>
+      <g class="paint living treeline" id="treeline"></g>
+      <!-- ground -->
+      <rect class="paint" y="580" width="1600" height="320" fill="url(#groundB)"/>
+      <g class="paint" stroke="#3d362d" stroke-width="1.4" fill="none" opacity=".7">
+        <path d="M120 700 l40 22 l-8 30 l52 18"/><path d="M420 760 l30 -18 l38 26 l30 -10"/><path d="M880 690 l-26 24 l34 20 l-12 28"/><path d="M1240 740 l38 -12 l20 30 l46 8"/><path d="M700 840 l32 -14 l26 22"/><path d="M1480 690 l-30 18 l8 26"/><path d="M250 830 l36 8 l14 -24"/>
+      </g>
+      <rect class="paint living" y="580" width="1600" height="320" fill="url(#groundL)"/>
+      <g class="paint living" id="tufts" fill="none" stroke-linecap="round"></g>
+      <!-- data center -->
+      <g class="paint">
+        <ellipse cx="800" cy="600" rx="470" ry="26" fill="#000" opacity=".22"/>
+        <!-- generator -->
+        <rect x="292" y="520" width="96" height="70" rx="3" fill="#7e868b"/><rect x="292" y="520" width="96" height="10" fill="#5f676c"/><rect x="360" y="482" width="12" height="40" fill="#5f676c"/><rect x="304" y="548" width="72" height="30" fill="url(#louver)"/>
+        <!-- main hall -->
+        <rect x="420" y="446" width="760" height="144" fill="#aab1b5"/>
+        <rect x="420" y="446" width="760" height="144" fill="url(#seams)"/>
+        <rect x="410" y="434" width="780" height="14" fill="#7f878c"/>
+        <rect x="420" y="446" width="760" height="22" fill="#98a0a5"/>
+        <rect x="760" y="530" width="80" height="60" fill="#5d656a"/><rect x="796" y="540" width="6" height="40" fill="#3e4549"/>
+        <rect x="470" y="560" width="200" height="14" fill="url(#louver)"/><rect x="930" y="560" width="200" height="14" fill="url(#louver)"/>
+        <!-- rooftop units -->
+        <g id="units"></g>
+        <!-- transformer yard -->
+        <rect x="1240" y="536" width="60" height="54" fill="#6d7579"/><rect x="1312" y="530" width="72" height="60" fill="#6d7579"/><rect x="1250" y="512" width="6" height="24" fill="#8f979c"/><rect x="1268" y="512" width="6" height="24" fill="#8f979c"/><rect x="1330" y="506" width="6" height="24" fill="#8f979c"/><rect x="1350" y="506" width="6" height="24" fill="#8f979c"/><rect x="1370" y="506" width="6" height="24" fill="#8f979c"/>
+        <line x1="1230" y1="500" x2="1400" y2="500" stroke="#8f979c" stroke-width="1.5"/>
+        <!-- fence -->
+        <line x1="0" y1="616" x2="1600" y2="616" stroke="#6b6f6c" stroke-width="1.5"/><line x1="0" y1="626" x2="1600" y2="626" stroke="#6b6f6c" stroke-width="1"/>
+        <g id="posts" stroke="#5a5e5c" stroke-width="2"></g>
+      </g>
+      <!-- hum rings -->
+      <g class="rings novideo" fill="none" stroke="#e7e2d6" stroke-width="2">
+        <circle class="hum" cx="800" cy="412" r="260" style="animation-delay:-0s"/><circle class="hum" cx="800" cy="412" r="260" style="animation-delay:-.8s"/><circle class="hum" cx="800" cy="412" r="260" style="animation-delay:-1.6s"/><circle class="hum" cx="800" cy="412" r="260" style="animation-delay:-2.4s"/>
+        <circle class="hum" cx="1345" cy="560" r="110" style="animation-delay:-.4s"/><circle class="hum" cx="1345" cy="560" r="110" style="animation-delay:-2s"/>
+        <circle class="hum" cx="340" cy="530" r="90" style="animation-delay:-1.2s"/><circle class="hum" cx="340" cy="530" r="90" style="animation-delay:-2.8s"/>
+      </g>
+      <!-- dust / pollen -->
+      <g class="barrenlife novideo" fill="#cdbfa8" id="dust"></g>
+      <g class="living novideo" fill="#f3e6b0" id="pollen"></g>
+      <!-- THRESHOLD unit + inverse wave -->
+      <g class="unit novideo">
+        <rect x="1188" y="574" width="40" height="30" rx="4" fill="#15221f" stroke="#5ec98a" stroke-width="1.5"/>
+        <rect x="1194" y="580" width="28" height="4" fill="#2a3b36"/><rect x="1194" y="588" width="28" height="4" fill="#2a3b36"/>
+        <circle class="led" cx="1220" cy="598" r="3" fill="#5ec98a"/>
+      </g>
+      <path class="inv novideo" id="inv" fill="none" stroke="#5ec98a" stroke-width="2.2" stroke-linecap="round"/>
+      <!-- instrument layer, anchored to the footage: hum off the roofline, inverse answering it -->
+      <g class="onvideo">
+        <g class="vrings" fill="none" stroke="#fbf7ec" stroke-width="2.4">
+          <circle class="hum" cx="730" cy="300" r="360" style="animation-delay:-0s"/>
+          <circle class="hum" cx="730" cy="300" r="360" style="animation-delay:-1.06s"/>
+          <circle class="hum" cx="730" cy="300" r="360" style="animation-delay:-2.13s"/>
+          <circle class="hum" cx="1432" cy="366" r="165" style="animation-delay:-.5s"/>
+          <circle class="hum" cx="1432" cy="366" r="165" style="animation-delay:-2.1s"/>
+          <circle class="hum" cx="172" cy="374" r="140" style="animation-delay:-1.4s"/>
+          <circle class="hum" cx="172" cy="374" r="140" style="animation-delay:-3s"/>
+        </g>
+        <path class="vinv glow" id="vinv" fill="none" stroke="#5ec98a" stroke-width="3.6" stroke-linecap="round"/>
+        <g class="vnode">
+          <circle class="glow" cx="172" cy="374" r="6.5" fill="#6fe2a0"/>
+          <circle cx="172" cy="374" r="15" fill="none" stroke="#5ec98a" stroke-width="1.6" opacity=".5"/>
+        </g>
+      </g>
+      <!-- life -->
+      <g id="trees" class="novideo"></g>
+      <g id="birds" class="novideo" fill="none" stroke="#182422" stroke-width="2.4" stroke-linecap="round"></g>
+      <g class="deer novideo" fill="#1f2a27" transform="translate(-639 36) scale(1.1)"><path d="M1462 606 c-4 -14 6 -22 22 -22 c14 0 22 6 26 14 l6 -14 c2 -4 6 -2 5 2 l-4 12 c0 8 -4 12 -10 14 l0 18 l-4 0 l-1 -16 l-10 0 l-2 16 l-4 0 l0 -16 c-8 0 -14 -2 -18 -8 l-2 12 l-4 0 z"/><circle cx="1517" cy="586" r="1.4" fill="#c9d3c5"/></g>
+    </svg>
+    <div class="scrim" aria-hidden="true"></div>
+    <svg class="ring" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="126" style="stroke-dashoffset:var(--ld,126)"/></svg>
+
+    <div class="band b1 e-punch" data-a="0" data-b="0.20" data-first="1">
+      <span class="kick">HackMIT 2026, sustainability track</span>
+      <h1 data-split="words">Data centers hum. <em class="em">The land goes quiet.</em></h1>
+    </div>
+    <div class="band b2 e-drift" data-a="0.21" data-b="0.43">
+      <h2 data-split="words">Below 200 Hz the meters miss it. The neighbors do not.</h2>
+    </div>
+    <div class="band b3 e-halves" data-a="0.45" data-b="0.67">
+      <h2><span class="half" style="--jx:-60px;--th:0">THRESHOLD hears the tone</span><br><span class="half" style="--jx:60px;--th:.12">and answers with its inverse.</span></h2>
+    </div>
+    <div class="band b4 e-rise" data-a="0.69" data-b="1" data-last="1" data-ramp="0.05">
+      <h2 data-split="words">Quiet comes back to the fence line.</h2>
+      <p class="sub">Active noise cancellation for data centers, with the readings to prove it.</p>
+      <div class="cta"><button class="btn primary" type="button" data-login>See the live dashboard</button></div>
+    </div>
+
+    <div class="hud chip" aria-live="off"><span class="dot"></span><span id="hudLabel">HUM 120 Hz</span><b id="hudVal">66.6 dBA</b></div>
+    <div class="cue" aria-hidden="true"><i></i>Scroll</div>
+  </div>
+</section>
+
+<main id="main" tabindex="-1">
+
+  <section class="sec card" id="problem">
+    <div class="problem">
+      <div>
+        <span class="kick part">The problem</span>
+        <h2 class="part">It never switches off.</h2>
+        <p class="lede part">Cooling fans, transformers and generators run all night at one low tone. Residents describe it as a sound they feel more than hear. It keeps people up, it drives down property values, and it is now the subject of lawsuits in Mississippi, Wisconsin and Michigan.</p>
+        <div class="chips part">
+          <div class="stat"><b>3</b><span>active lawsuits, three states</span></div>
+          <div class="stat"><b>&lt; 200 Hz</b><span>where standard dBA meters go blind</span></div>
+          <div class="stat"><b>Once</b><span>tested at permitting, then never again</span></div>
+        </div>
+      </div>
+      <blockquote class="quote part">"It manifests like vibrations. You cannot sleep, you cannot have a conversation, you cannot relax in your own house."<small>Resident complaint language from 2026 nuisance filings</small></blockquote>
+    </div>
+  </section>
+
+  <div class="divider" aria-hidden="true"><svg viewBox="0 0 1000 90" preserveAspectRatio="none"><path class="humline draw" id="div1a"/><path class="invline draw" id="div1b"/></svg></div>
+
+  <section class="sec card" id="how">
+    <span class="kick part">How it works</span>
+    <h2 class="part">Find the tone. Answer it.</h2>
+    <p class="lede part">One enclosure, one microphone, one speaker, and the same physics that quiets industrial transformers and HVAC plants.</p>
+    <div class="steps part">
+      <article class="step">
+        <div class="fig"><svg viewBox="0 0 200 120"><g class="pulse" fill="none" stroke="#b9b1a3" stroke-width="1.6"><path d="M52 26 q-20 34 0 68"/><path d="M34 14 q-30 46 0 92"/><path d="M16 4 q-40 56 0 112"/><path d="M148 26 q20 34 0 68"/><path d="M166 14 q30 46 0 92"/><path d="M184 4 q40 56 0 112"/></g><rect x="86" y="14" width="28" height="54" rx="14" fill="#2a3b36" stroke="#5ec98a" stroke-width="2"/><line x1="94" y1="26" x2="106" y2="26" stroke="#5ec98a" stroke-width="1.2" opacity=".7"/><line x1="94" y1="34" x2="106" y2="34" stroke="#5ec98a" stroke-width="1.2" opacity=".7"/><line x1="94" y1="42" x2="106" y2="42" stroke="#5ec98a" stroke-width="1.2" opacity=".7"/><path d="M74 58 a26 26 0 0 0 52 0" fill="none" stroke="#5ec98a" stroke-width="2"/><line x1="100" y1="84" x2="100" y2="104" stroke="#5ec98a" stroke-width="2"/><line x1="82" y1="104" x2="118" y2="104" stroke="#5ec98a" stroke-width="2" stroke-linecap="round"/><text x="100" y="118" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#a7b3ad">120 Hz captured</text></svg></div>
+        <span class="n">01</span><h3>Listen</h3>
+        <p>A microphone at the enclosure captures the dominant tone and its phase.</p>
+      </article>
+      <article class="step">
+        <div class="fig"><svg viewBox="0 0 200 120"><path d="M10 40 c10 -30 20 -30 30 0 s20 30 30 0 s20 -30 30 0 s20 30 30 0 s20 -30 30 0 s20 30 30 0" fill="none" stroke="#b9b1a3" stroke-width="2"/><path d="M10 40 c10 30 20 30 30 0 s20 -30 30 0 s20 30 30 0 s20 -30 30 0 s20 30 30 0 s20 -30 30 0" fill="none" stroke="#5ec98a" stroke-width="2"/><line class="pulse" x1="10" y1="92" x2="190" y2="92" stroke="#eef3ef" stroke-width="2.5" stroke-linecap="round"/><text x="100" y="112" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#a7b3ad">residual</text></svg></div>
+        <span class="n">02</span><h3>Cancel</h3>
+        <p>A speaker emits the matched inverse. Peaks cancel, the same physics used on industrial transformers and HVAC, proven to 20 dB.</p>
+      </article>
+      <article class="step">
+        <div class="fig"><svg viewBox="0 0 200 120"><rect x="20" y="30" width="160" height="14" rx="7" fill="#2a3b36"/><rect x="20" y="30" width="112" height="14" rx="7" fill="#5ec98a"/><line x1="140" y1="20" x2="140" y2="54" stroke="#e8c079" stroke-width="2"/><text x="140" y="14" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#e8c079">55 dBA</text><rect x="20" y="66" width="160" height="14" rx="7" fill="#2a3b36"/><rect class="pulse" x="20" y="66" width="98" height="14" rx="7" fill="#5ec98a"/><text x="20" y="104" font-family="JetBrains Mono, monospace" font-size="10" fill="#a7b3ad">day / night limits, live</text></svg></div>
+        <span class="n">03</span><h3>Report</h3>
+        <p>Live readings compare against the local ordinance and flag when mitigation is maxed out and the limit is still close.</p>
+      </article>
+    </div>
+    <p class="passive part">Foam and cardboard absorption catches the broadband noise the cancellation cannot.</p>
+
+    <div class="hold card part" id="hold">
+      <div>
+        <span class="label">The interactive moment</span>
+        <svg class="wave" viewBox="0 0 800 220" preserveAspectRatio="none" aria-hidden="true"><path class="h" id="wH"/><path class="i" id="wI"/><path class="r" id="wR"/></svg>
+      </div>
+      <div>
+        <div class="readout"><span id="holdVal">66.6</span><small>dBA</small></div>
+        <button class="holdbtn" id="holdBtn" type="button" aria-describedby="holdHint">Hold to cancel the hum</button>
+        <p class="hint" id="holdHint">Press and hold. Let go early and the hum comes back.</p>
+        <ul class="lights" aria-label="Cancellation readouts">
+          <li><span>Dominant tone</span><span>120 Hz</span></li>
+          <li><span>Phase</span><span>180°</span></li>
+          <li><span>Attenuation</span><span>12.4 dB</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec card" id="impact">
+    <div class="impact">
+      <div class="art part">
+        <img src="assets/hero-ending.jpg" alt="The same fence line after cancellation: meadow, trees, birds crossing the sky and deer grazing beside the data center." loading="lazy" decoding="async">
+        <svg viewBox="0 0 400 300" aria-hidden="true">
+          <defs><linearGradient id="sk2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f4d6e"/><stop offset="1" stop-color="#cfd9c2"/></linearGradient><linearGradient id="gr2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6fa458"/><stop offset="1" stop-color="#27472a"/></linearGradient><radialGradient id="sun2"><stop offset="0" stop-color="#ffe9b0" stop-opacity=".95"/><stop offset=".3" stop-color="#e8c079" stop-opacity=".55"/><stop offset="1" stop-color="#e8c079" stop-opacity="0"/></radialGradient></defs>
+          <rect width="400" height="300" fill="url(#sk2)"/>
+          <circle cx="310" cy="70" r="80" fill="url(#sun2)"/><circle cx="310" cy="70" r="26" fill="#ffe9b0" opacity=".85"/>
+          <path d="M0 180 Q100 150 200 170 T400 160 V300 H0Z" fill="#3f6b46"/>
+          <rect y="200" width="400" height="100" fill="url(#gr2)"/>
+          <rect x="120" y="168" width="160" height="34" fill="#aab1b5"/><rect x="116" y="164" width="168" height="5" fill="#7f878c"/>
+          <g fill="#2f5233"><ellipse cx="40" cy="196" rx="26" ry="22"/><rect x="36" y="196" width="8" height="26" fill="#3e2f22"/><ellipse cx="360" cy="192" rx="30" ry="26"/><rect x="356" y="192" width="8" height="30" fill="#3e2f22"/><ellipse cx="80" cy="206" rx="18" ry="16"/><rect x="77" y="206" width="6" height="20" fill="#3e2f22"/></g>
+          <g class="bird2" fill="none" stroke="#182422" stroke-width="1.8" stroke-linecap="round"><path d="M200 60 q5 -6 10 0 q5 -6 10 0"/><path d="M230 48 q4 -5 8 0 q4 -5 8 0"/><path d="M180 74 q4 -5 8 0 q4 -5 8 0"/></g>
+          <g fill="#1f2a27"><path d="M300 236 c-3 -10 4 -16 16 -16 c10 0 16 4 19 10 l4 -10 c2 -3 5 -1 4 1 l-3 9 c0 6 -3 9 -7 10 l0 13 l-3 0 l-1 -12 l-7 0 l-1 12 l-3 0 l0 -12 c-6 0 -10 -1 -13 -6 l-2 9 l-3 0 z"/></g>
+          <g stroke="#3f8a3a" stroke-width="1.6" fill="none" stroke-linecap="round"><path d="M30 262 q-2 -8 -4 -14 M30 262 q0 -9 1 -16 M30 262 q3 -8 5 -13"/><path d="M110 280 q-2 -8 -4 -14 M110 280 q0 -9 1 -16 M110 280 q3 -8 5 -13"/><path d="M250 272 q-2 -8 -4 -14 M250 272 q0 -9 1 -16 M250 272 q3 -8 5 -13"/><path d="M340 286 q-2 -8 -4 -14 M340 286 q0 -9 1 -16 M340 286 q3 -8 5 -13"/></g>
+        </svg>
+      </div>
+      <div>
+        <span class="kick part">Why it matters</span>
+        <h2 class="part">Sensory danger zones.</h2>
+        <p class="lede part">Data centers land on land that used to be quiet. Ecologists use the phrase sensory danger zone for what the hum does to predator and prey, and to birds trying to breed. Cutting noise at the source gives that ground back. The unit reports its own power draw, so the cost of the fix stays honest.</p>
+        <div class="figs part">
+          <div class="fig2"><b>Up to 20 dB</b><span>tonal reduction, the proven ceiling for this method</span></div>
+          <div class="fig2"><b>5.2 W</b><span>the unit's own draw, reported live on the dashboard</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider" aria-hidden="true"><svg viewBox="0 0 1000 90" preserveAspectRatio="none"><path class="humline draw" id="div2a"/><path class="invline draw" id="div2b"/></svg></div>
+
+  <section class="sec card" id="compliance">
+    <span class="kick part">Compliance</span>
+    <h2 class="part">Measured against the rule that applies to you.</h2>
+    <p class="lede part">Pick the profile for your county. The dashboard compares every reading against the day and night limit that is in force right now.</p>
+    <table class="part">
+      <thead><tr><th>Profile</th><th>Day limit</th><th>Night limit</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>Prince William County, VA</td><td class="num">60 dBA</td><td class="num">55 dBA</td><td>Residential districts, cooling equipment covered around the clock</td></tr>
+        <tr><td>Divide County, ND</td><td class="num">50 dBA</td><td class="num">45 dBA</td><td>Includes low-frequency noise and generators</td></tr>
+        <tr><td>PennFuture model ordinance</td><td class="num">55 dBA</td><td class="num">50 dBA</td><td>Upper end of the recommended range at the residential property line</td></tr>
+      </tbody>
+    </table>
+    <p class="note part">Prototype readings are not certified compliance measurements.</p>
+  </section>
+
+  <section class="sec card" id="pricing">
+    <span class="kick part">Pricing</span>
+    <h2 class="part">Who pays. Who doesn't.</h2>
+    <div class="plans part">
+      <article class="plan">
+        <h3>Residents</h3>
+        <div class="price">Free</div>
+        <p>Public readings for the site near you. Alerts when the night limit is at risk.</p>
+        <ul><li>Live level for your fence line</li><li>Text alert at exceedance</li><li>Exceedance history you can bring to a hearing</li></ul>
+        <button class="btn" type="button" data-login>Follow a site</button>
+      </article>
+      <article class="plan hi">
+        <span class="tag">For operators</span>
+        <h3>Operators</h3>
+        <div class="price">Per enclosure<small>on request</small></div>
+        <p>The full unit: cancellation hardware, energy transparency, compliance reporting and site intelligence.</p>
+        <ul><li>Active cancellation, up to 20 dB tonal</li><li>Power draw and cost per decibel-hour</li><li>Ordinance profiles with official alerts</li><li>Site intelligence for the next build</li></ul>
+        <button class="btn primary" type="button" data-login>See the live dashboard</button>
+      </article>
+      <article class="plan">
+        <h3>Government</h3>
+        <div class="price">Per site<small>on request</small></div>
+        <p>Continuous ordinance monitoring, exceedance log, official alerts by text.</p>
+        <ul><li>Day and night thresholds, applied by clock</li><li>Exceedance count and log</li><li>Text to the duty official at exceedance</li></ul>
+        <button class="btn" type="button" data-login>Monitor a site</button>
+      </article>
+    </div>
+  </section>
+
+  <section class="sec card" id="faq">
+    <span class="kick part">Questions</span>
+    <h2 class="part">What people ask first.</h2>
+    <div class="faq part">
+      <details><summary>Is this a certified sound level meter?</summary><p>No. The prototype uses an ordinary microphone, so its readings are estimates. They are good for trend, for alerts, and for knowing when to call in a certified survey. They are not a legal measurement.</p></details>
+      <details><summary>Does the cancellation itself make noise or use a lot of power?</summary><p>It emits a matched inverse tone inside the enclosure, which is how the peak cancels. The unit draws about 5 W and shows that number on the dashboard next to the decibels it removes, so the trade stays visible.</p></details>
+      <details><summary>Why not just build a wall?</summary><p>Walls and berms work on higher frequencies. The low tone that residents complain about bends around them. Cancellation works at the source, on the tone itself, and passive foam takes the broadband remainder.</p></details>
+      <details><summary>Can residents see the readings?</summary><p>Yes. The resident plan is free. It shows the live level for a site, the limit in force, and sends a text when the night limit is at risk.</p></details>
+    </div>
+  </section>
+
+  <section class="sec card close">
+    <h2 class="part">See what quiet looks like on a dashboard.</h2>
+    <div class="part"><button class="btn primary" type="button" data-login>See the live dashboard</button></div>
+  </section>
+</main>
+
+<footer>
+  <div class="row">
+    <span class="mono">THRESHOLD</span>
+    <span>Built at HackMIT 2026, sustainability track</span>
+  </div>
+  <p class="disc">THRESHOLD is a HackMIT 2026 prototype built for the sustainability track. Dashboard data is simulated until the hardware is connected. Prototype readings are not certified compliance measurements.</p>
+</footer>
+
+<div class="modal" id="login" role="dialog" aria-modal="true" aria-labelledby="loginTitle" hidden>
+  <div class="back" data-close></div>
+  <form id="loginForm" novalidate>
+    <button class="x" type="button" data-close aria-label="Close">×</button>
+    <h3 id="loginTitle">Operator login</h3>
+    <label>Email<input type="email" name="email" id="email" autocomplete="username" placeholder="ops@yoursite.com" required></label>
+    <label>Password<input type="password" name="password" id="password" autocomplete="current-password" placeholder="••••••••" required></label>
+    <p class="small">Prototype login. Any email and password open the demo dashboard. Nothing is sent anywhere.</p>
+    <div class="row"><button class="btn primary" type="submit">Open dashboard</button><button class="btn" type="button" id="demoFill">Use the demo account</button></div>
+  </form>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const smoothstep = (p, e0, e1) => { const t = clamp((p - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); };
+function rng(seed){ let s = seed >>> 0; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
+const svgNS = 'http://www.w3.org/2000/svg';
+const el = (n, attrs, parent) => { const e = document.createElementNS(svgNS, n); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+
+/* ---------- hero scene generation (seeded, identical every load) ---------- */
+(function buildScene(){
+  const r = rng(20260920);
+  // rooftop units
+  const units = $('#units');
+  for (let i = 0; i < 6; i++) {
+    const x = 470 + i * 116;
+    el('rect', { x, y: 396, width: 82, height: 40, rx: 3, fill: '#8f979c' }, units);
+    el('rect', { x, y: 396, width: 82, height: 6, fill: '#6d757a' }, units);
+    el('circle', { cx: x + 41, cy: 418, r: 15, fill: '#3e4549' }, units);
+    const g = el('g', { class: 'fan', style: `animation-delay:${(-r() * 1.4).toFixed(2)}s` }, units);
+    for (let b = 0; b < 4; b++) el('rect', { x: x + 39, y: 405, width: 4, height: 13, rx: 2, fill: '#b9c0c4', transform: `rotate(${b * 90} ${x + 41} 418)` }, g);
+    el('circle', { cx: x + 41, cy: 418, r: 3, fill: '#d8dde0' }, units);
+  }
+  // fence posts
+  const posts = $('#posts');
+  for (let x = 0; x <= 1600; x += 64) el('line', { x1: x, y1: 606, x2: x, y2: 632 }, posts);
+  // inverse wave: sine from unit to the roof units
+  const inv = $('#inv');
+  let d = 'M1188 588';
+  for (let x = 1188; x > 820; x -= 8) d += ` L${x} ${(588 - (1188 - x) * 0.46 + Math.sin((1188 - x) / 9) * 9).toFixed(1)}`;
+  inv.setAttribute('d', d);
+  const len = inv.getTotalLength();
+  inv.style.setProperty('--len', len.toFixed(0) + 'px');
+  inv.style.strokeDasharray = len.toFixed(0);
+  // the same wave, re-anchored to where the building actually sits in the footage, and
+  // kept on the left so the right-hand caption band has clear air
+  const vinv = $('#vinv');
+  let vd = '';
+  for (let x = 172; x <= 1010; x += 7) vd += (vd ? ' L' : 'M') + x + ' ' + (374 - (x - 172) * 0.062 + Math.sin((x - 172) / 13) * 13).toFixed(1);
+  vinv.setAttribute('d', vd);
+  const vlen = vinv.getTotalLength();
+  vinv.style.setProperty('--vlen', vlen.toFixed(0) + 'px');
+  vinv.style.strokeDasharray = vlen.toFixed(0);
+  // grass tufts
+  const tufts = $('#tufts');
+  for (let i = 0; i < 90; i++) {
+    const x = r() * 1600, y = 640 + r() * 250, s = 0.7 + (y - 640) / 250 * 1.3;
+    const pos = el('g', { transform: `translate(${x.toFixed(0)} ${y.toFixed(0)}) scale(${s.toFixed(2)})` }, tufts);
+    const g = el('g', { class: 'tuft', stroke: r() > .5 ? '#3f8a3a' : '#5aa64a', 'stroke-width': 1.8, style: `--t:${(0.6 + r() * 0.24).toFixed(3)}` }, pos);
+    el('path', { d: 'M0 0 q-3 -12 -6 -22 M0 0 q0 -14 1 -26 M0 0 q4 -12 7 -20' }, g);
+  }
+  // trees
+  const trees = $('#trees');
+  const tree = (x, y, s, t, parent) => {
+    const pos = el('g', { transform: `translate(${x} ${y}) scale(${s})` }, parent);
+    const g = el('g', { class: 'tree', style: `--t:${t.toFixed(3)}` }, pos);
+    el('rect', { x: -4, y: -40, width: 8, height: 42, fill: '#3e2f22' }, g);
+    el('ellipse', { cx: 0, cy: -58, rx: 30, ry: 26, fill: '#2f5233' }, g);
+    el('ellipse', { cx: -18, cy: -44, rx: 22, ry: 18, fill: '#3b6a3e' }, g);
+    el('ellipse', { cx: 18, cy: -46, rx: 22, ry: 19, fill: '#356037' }, g);
+  };
+  [[70, 690, 1.5], [200, 660, 1.1], [330, 700, 1.3], [1420, 690, 1.4], [1540, 660, 1.2], [1310, 720, 1.0], [140, 780, 1.9], [1500, 800, 2.0]].forEach(([x, y, s], i) => tree(x, y, s, 0.66 + i * 0.03, trees));
+  // treeline on the ridge
+  const tl = $('#treeline');
+  for (let i = 0; i < 26; i++) { const x = 20 + i * 62 + r() * 20; if (x > 380 && x < 1260) continue; tree(x, 526 + Math.sin(x / 300) * 10, 0.35 + r() * 0.2, 0.7 + r() * 0.2, tl); }
+  // birds
+  const birds = $('#birds');
+  for (let i = 0; i < 9; i++) {
+    const x = 500 + r() * 900, y = 120 + r() * 200, s = 0.7 + r() * 0.8;
+    const pos = el('g', { transform: `translate(${x.toFixed(0)} ${y.toFixed(0)}) scale(${s.toFixed(2)})` }, birds);
+    el('path', { class: 'bird', d: 'M-10 0 q5 -7 10 0 q5 -7 10 0', style: `--t:${(0.76 + r() * 0.18).toFixed(3)};--dx:${(140 + r() * 160).toFixed(0)}px;--dy:${(10 + r() * 50).toFixed(0)}px` }, pos);
+  }
+  // dust and pollen
+  const dust = $('#dust'), pollen = $('#pollen');
+  for (let i = 0; i < 26; i++) {
+    el('circle', { class: 'mote', cx: (r() * 1600).toFixed(0), cy: (300 + r() * 500).toFixed(0), r: (1 + r() * 2).toFixed(1), opacity: (0.25 + r() * 0.4).toFixed(2), style: `animation-delay:${(-r() * 9).toFixed(1)}s` }, dust);
+    el('circle', { class: 'mote', cx: (r() * 1600).toFixed(0), cy: (200 + r() * 550).toFixed(0), r: (1 + r() * 1.6).toFixed(1), opacity: (0.2 + r() * 0.4).toFixed(2), style: `animation-delay:${(-r() * 9).toFixed(1)}s` }, pollen);
+  }
+})();
+
+/* ---------- caption splitting ---------- */
+const bands = $$('.band').map((b, i) => ({ el: b, a: +b.dataset.a, b: +b.dataset.b, ramp: b.dataset.ramp ? +b.dataset.ramp : null, first: !!b.dataset.first, last: !!b.dataset.last, op: -1, k: -1, i }));
+(function split(){
+  const r = rng(7);
+  $$('[data-split]').forEach(h => {
+    const text = h.textContent.trim();
+    const sr = document.createElement('span'); sr.className = 'sr'; sr.textContent = text;
+    const vis = document.createElement('span'); vis.setAttribute('aria-hidden', 'true');
+    const nodes = [...h.childNodes];
+    h.textContent = '';
+    let idx = 0;
+    const words = [];
+    nodes.forEach(n => {
+      const em = n.nodeType === 1 && n.classList.contains('em');
+      (n.textContent || '').split(/\s+/).filter(Boolean).forEach(w => words.push({ w, em }));
+    });
+    words.forEach((o, n) => {
+      const s = document.createElement('span');
+      s.className = 'w' + (o.em ? ' em' : '');
+      s.textContent = o.w;
+      s.style.setProperty('--th', (n / words.length * 0.5 + r() * 0.06).toFixed(3));
+      vis.appendChild(s);
+      if (n < words.length - 1) vis.appendChild(document.createTextNode(' '));
+    });
+    h.appendChild(sr); h.appendChild(vis);
+  });
+})();
+
+/* ---------- hero drive ---------- */
+const hero = $('.hero'), stage = $('#stage');
+const hudLabel = $('#hudLabel'), hudVal = $('#hudVal');
+let target = 0, shown = 0, rafId = null, lastTick = 0, heroOnScreen = true, scrubOn = false;
+let lastP = -1, lastHud = '', lastHudAt = 0, ancClass = false;
+let loadK = 0, loadStart = 0;
+
+function heroProgress(){
+  const rect = hero.getBoundingClientRect();
+  const range = hero.offsetHeight - innerHeight;
+  return range > 0 ? clamp(-rect.top / range, 0, 1) : 0;
+}
+function updateCaptions(p, now){
+  if (Math.abs(p - lastP) > 0.0015) { lastP = p; stage.style.setProperty('--p', p.toFixed(4)); }
+  bands.forEach(b => {
+    const f = Math.min(0.02, (b.b - b.a) / 3);
+    let op = (b.first ? 1 : smoothstep(p, b.a, b.a + f)) * (b.last ? 1 : 1 - smoothstep(p, b.b - f, b.b));
+    let k = clamp((p - b.a) / (b.ramp || Math.min(0.025, (b.b - b.a) * 0.35)), 0, 1);
+    if (b.first) k = Math.max(k, loadK);
+    if (Math.abs(op - b.op) > 0.008) { b.op = op; b.el.style.opacity = op.toFixed(3); }
+    if (Math.abs(k - b.k) > 0.008) { b.k = k; b.el.style.setProperty('--k', k.toFixed(3)); }
+  });
+  // HUD readout, throttled to ~10Hz and only on change
+  if (now - lastHudAt > 100) {
+    const t = smoothstep(p, 0.42, 0.62);
+    const level = 66.6 - 12.4 * t;
+    const label = t > 0.5 ? 'RESIDUAL 120 Hz' : 'HUM 120 Hz';
+    const txt = label + '|' + level.toFixed(1);
+    if (txt !== lastHud) { lastHud = txt; lastHudAt = now; hudLabel.textContent = label; hudVal.textContent = level.toFixed(1) + ' dBA'; }
+    const anc = t > 0.5; if (anc !== ancClass) { ancClass = anc; stage.classList.toggle('anc', anc); }
+  }
+}
+function tick(now){
+  const dt = Math.min(100, now - (lastTick || now));
+  lastTick = now;
+  const k = 0.16;
+  shown += (target - shown) * (1 - Math.pow(1 - k, dt / 16.667));
+  if (loadK < 1) { if (!loadStart) loadStart = now; const t = clamp((now - loadStart - 250) / 1300, 0, 1); loadK = t * t * (3 - 2 * t); }
+  const converged = Math.abs(target - shown) < 0.0005 && loadK >= 1;
+  if (converged) { shown = target; rafId = null; lastTick = 0; } else rafId = requestAnimationFrame(tick);
+  if (video.duration) requestSeek(footageTime(shown));
+  updateCaptions(shown, now);
+}
+function onScroll(){
+  target = heroProgress();
+  if (rafId === null && heroOnScreen) rafId = requestAnimationFrame(tick);
+}
+function enableScrub(){
+  if (scrubOn) return; scrubOn = true;
+  addEventListener('scroll', onScroll, { passive: true });
+  bands.forEach(b => { b.op = -1; b.k = -1 });
+  lastP = -1; unpinFinalStates();
+  onScroll(); if (rafId === null) rafId = requestAnimationFrame(tick);
+}
+function disableScrub(){
+  if (!scrubOn) return; scrubOn = false;
+  removeEventListener('scroll', onScroll);
+  if (rafId !== null) { cancelAnimationFrame(rafId); rafId = null; }
+}
+new IntersectionObserver(es => es.forEach(e => { heroOnScreen = e.isIntersecting; stage.classList.toggle('live', e.isIntersecting && !reduced.matches); if (heroOnScreen && scrubOn) onScroll(); }), { threshold: 0 }).observe(hero);
+
+/* ---------- the scrub hero ---------- */
+const HERO_VIDEO = 'assets/hero-scrub.mp4';
+const HERO_POSTER = 'assets/hero-poster.jpg';
+const VIDEO_BYTES = 7392112;        // fallback when the host omits Content-Length
+const video = $('#heroVideo');
+const GATES = [
+  '(max-width: 720px)',
+  '(orientation: portrait) and (max-width: 1024px)',
+  '(orientation: portrait) and (pointer: coarse)',
+  '(orientation: landscape) and (pointer: coarse) and (max-height: 560px)',
+  '(prefers-reduced-motion: reduce)'
+];
+const MQLS = GATES.map(q => matchMedia(q));
+let seekBusy = false, pendingTime = null, videoStarted = false;
+/* Scroll maps to footage time through a curve, not a straight line. The regrowth in the
+   shot runs far faster than the story does: the land is already greening a second in,
+   while the page still has two beats of problem to tell.
+   The footage is deliberately run ahead of the wavefront that reveals it. What the mask
+   uncovers has to be land that has already come back, or the reveal is just barren
+   footage over a barren poster and nothing reads. So the shot reaches its full meadow by
+   the time band three lands, while the wavefront is still only part way across the frame,
+   and the rest of the scroll is the boundary travelling out to the edges. */
+const TIMEMAP = [[0, 0], [0.20, 0.03], [0.40, 0.22], [0.55, 0.50], [0.75, 0.72], [1, 1]];
+function footageTime(p){
+  for (let i = 1; i < TIMEMAP.length; i++) {
+    const [p1, u1] = TIMEMAP[i];
+    if (p <= p1) { const [p0, u0] = TIMEMAP[i - 1]; return (u0 + (u1 - u0) * (p - p0) / (p1 - p0)) * video.duration; }
+  }
+  return video.duration;
+}
+function requestSeek(t){ if (!video.duration) return; if (seekBusy) { pendingTime = t; return; } seekBusy = true; video.currentTime = t; }
+video.addEventListener('seeked', () => { seekBusy = false; if (pendingTime !== null) { const t = pendingTime; pendingTime = null; requestSeek(t); } });
+video.addEventListener('error', () => { seekBusy = false; pendingTime = null; stage.classList.remove('has-video', 'loading'); });
+async function loadHeroBlob(){
+  stage.classList.add('loading');
+  const ring = $('.ring'); const ctrl = new AbortController();
+  let watchdog = setTimeout(() => ctrl.abort(), 20000);
+  const res = await fetch(HERO_VIDEO, { priority: 'low', signal: ctrl.signal });
+  const total = Number(res.headers.get('Content-Length')) || VIDEO_BYTES;
+  const reader = res.body.getReader(); const chunks = []; let got = 0, lastRing = 0;
+  for (;;) {
+    const { done, value } = await reader.read(); if (done) break;
+    clearTimeout(watchdog); watchdog = setTimeout(() => ctrl.abort(), 20000);
+    chunks.push(value); got += value.length;
+    const frac = Math.min(1, got / total), now = performance.now();
+    if (now - lastRing > 100 || frac === 1) { lastRing = now; ring.style.setProperty('--ld', Math.round(126 * (1 - frac))); }
+  }
+  clearTimeout(watchdog);
+  video.src = URL.createObjectURL(new Blob(chunks)); video.load();
+  video.addEventListener('canplay', () => { requestSeek(footageTime(heroProgress())); stage.classList.remove('loading'); stage.classList.add('video-ready'); }, { once: true });
+}
+function failVideo(){
+  // fall all the way back: the drawn scene carries the same journey on its own
+  stage.classList.remove('loading', 'poster-on', 'has-video', 'video-ready');
+  const ring = $('.ring'); if (ring) ring.style.display = 'none';
+}
+function maybeStartVideo(){
+  if (!HERO_VIDEO || videoStarted || location.protocol === 'file:') return;
+  if (GATES.some(q => matchMedia(q).matches)) return;
+  videoStarted = true;
+  // the poster wins the bandwidth race on purpose: paint it, then stream the film behind it
+  const poster = $('.poster');
+  let kicked = false;
+  const start = () => {
+    if (kicked) return; kicked = true;
+    loadHeroBlob().catch(failVideo);
+  };
+  const img = new Image();
+  img.onload = () => { poster.style.backgroundImage = `url('${HERO_POSTER}')`; stage.classList.add('has-video', 'poster-on'); start(); };
+  img.onerror = start;
+  img.src = HERO_POSTER;
+  setTimeout(start, 4000);
+}
+
+/* ---------- the static hero, and reduced motion honored live in both directions ---------- */
+let pinned = false;
+function pinHero(){
+  pinned = true;
+  disableScrub();
+  stage.style.setProperty('--p', '1');
+  bands.forEach(b => { b.el.style.opacity = b.last ? '1' : '0'; b.el.style.setProperty('--k', '1'); });
+}
+function pinToFinalStates(){
+  pinHero();
+  $$('.card').forEach(c => c.classList.add('in', 'settled'));
+  $$('.divider .draw').forEach(p => p.style.strokeDashoffset = '0');
+  holdSet(1, true);
+}
+function unpinFinalStates(){
+  if (!pinned) return; pinned = false;
+  bands.forEach(b => { b.el.style.opacity = ''; b.el.style.removeProperty('--k'); });
+}
+function applyHeroMode(){
+  const gated = GATES.some(q => matchMedia(q).matches);
+  document.documentElement.classList.toggle('gated', gated);
+  if (reduced.matches) pinToFinalStates();        // no motion at all: everything at rest
+  else if (gated) pinHero();                      // a phone still gets the page's motion, just not the scrub
+  else { enableScrub(); maybeStartVideo(); }
+}
+MQLS.forEach(m => m.addEventListener('change', applyHeroMode));
+
+/* ---------- nav ---------- */
+const nav = $('#nav'); let navSolid = false;
+addEventListener('scroll', () => { const s = scrollY > innerHeight * 0.6; if (s !== navSolid) { navSolid = s; nav.classList.toggle('solid', s); } }, { passive: true });
+
+/* ---------- section entrances ---------- */
+const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); setTimeout(() => e.target.classList.add('settled'), 1400); io.unobserve(e.target); } }), { threshold: 0.18 });
+$$('.card').forEach(c => io.observe(c));
+
+/* ---------- self-drawing dividers ---------- */
+(function dividers(){
+  const mk = (id, amp, phase) => { let d = 'M0 45'; for (let x = 0; x <= 1000; x += 10) d += ` L${x} ${(45 + Math.sin(x / 38 + phase) * amp).toFixed(1)}`; const p = $('#' + id); p.setAttribute('d', d); const L = p.getTotalLength(); p.style.strokeDasharray = L; p.style.strokeDashoffset = L; return { p, L, last: -1 }; };
+  const lines = [mk('div1a', 22, 0), mk('div1b', 22, Math.PI), mk('div2a', 16, 1), mk('div2b', 16, 1 + Math.PI)];
+  function draw(){
+    if (pinned) return;
+    lines.forEach(o => { const r = o.p.getBoundingClientRect(); const k = clamp((innerHeight - r.top) / (innerHeight * 0.8), 0, 1); const v = Math.round(o.L * (1 - k)); if (v !== o.last) { o.last = v; o.p.style.strokeDashoffset = v; } });
+  }
+  addEventListener('scroll', draw, { passive: true }); draw();
+})();
+
+/* ---------- the hold moment ---------- */
+const hold = $('#hold'), holdBtn = $('#holdBtn'), holdVal = $('#holdVal');
+const wH = $('#wH'), wI = $('#wI'), wR = $('#wR');
+let h = 0, holding = false, holdRaf = null, holdDone = false, holdLastT = 0;
+const wr = rng(3);
+const noise = Array.from({ length: 101 }, () => (wr() - 0.5) * 10);
+function wavePath(amp, phase, noiseAmp){ let d = ''; for (let i = 0; i <= 100; i++) { const x = i * 8; const y = 110 + Math.sin(i / 100 * Math.PI * 6 + phase) * amp + noise[i] * noiseAmp; d += (i ? ' L' : 'M') + x + ' ' + y.toFixed(1); } return d; }
+function holdSet(v, done){
+  h = v;
+  holdBtn.style.setProperty('--h', h.toFixed(3));
+  wH.setAttribute('d', wavePath(60, 0, 0.6));
+  wI.setAttribute('d', wavePath(60 * h, Math.PI, 0));
+  wR.setAttribute('d', wavePath(60 * (1 - h), 0, 0.6));
+  holdVal.textContent = (66.6 - 12.4 * h).toFixed(1);
+  if (done || h >= 1) { if (!holdDone) { holdDone = true; hold.classList.add('done'); holdBtn.textContent = 'Hum cancelled'; } }
+}
+function holdTick(now){
+  const dt = Math.min(64, now - (holdLastT || now)); holdLastT = now;
+  const rate = holding ? dt / 1600 : -dt / 900;
+  const next = clamp(h + rate, 0, 1);
+  if (next !== h) holdSet(next, false);
+  if ((holding && h < 1) || (!holding && h > 0 && !holdDone)) holdRaf = requestAnimationFrame(holdTick); else { holdRaf = null; holdLastT = 0; }
+}
+function startHold(e){ if (holdDone) return; e.preventDefault(); holding = true; if (holdRaf === null) holdRaf = requestAnimationFrame(holdTick); }
+function endHold(){ holding = false; if (holdRaf === null && h > 0 && !holdDone) holdRaf = requestAnimationFrame(holdTick); }
+holdBtn.addEventListener('pointerdown', startHold);
+addEventListener('pointerup', endHold); addEventListener('pointercancel', endHold);
+holdBtn.addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) startHold(e); });
+holdBtn.addEventListener('keyup', e => { if (e.key === ' ' || e.key === 'Enter') endHold(); });
+holdSet(0, false);
+
+/* ---------- bootstrap, last, so nothing runs before it is defined ---------- */
+applyHeroMode();
+
+/* ---------- pause everything on hidden tabs ---------- */
+document.addEventListener('visibilitychange', () => document.body.classList.toggle('paused', document.hidden));
+const st = document.createElement('style'); st.textContent = 'body.paused *,body.paused *::before,body.paused *::after{animation-play-state:paused!important}'; document.head.appendChild(st);
+
+/* ---------- login (prototype, JS only) ---------- */
+const modal = $('#login'), form = $('#loginForm');
+let lastFocus = null;
+function openLogin(){ lastFocus = document.activeElement; modal.hidden = false; modal.classList.add('open'); setTimeout(() => $('#email').focus(), 50); }
+function closeLogin(){ modal.classList.remove('open'); modal.hidden = true; if (lastFocus) lastFocus.focus(); }
+$$('[data-login]').forEach(b => b.addEventListener('click', openLogin));
+$$('[data-close]').forEach(b => b.addEventListener('click', closeLogin));
+addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.hidden) closeLogin(); });
+$('#demoFill').addEventListener('click', () => { $('#email').value = 'ops@threshold.demo'; $('#password').value = 'quiet-please'; });
+form.addEventListener('submit', e => {
+  e.preventDefault();
+  const email = $('#email').value.trim() || 'ops@threshold.demo';
+  try { localStorage.setItem('threshold.session', JSON.stringify({ email, at: Date.now(), site: 'Gainesville Enclosure 1' })); } catch (_) {}
+  location.href = 'dashboard.html';
+});
+if (location.hash === '#login') openLogin();
+})();
+</script>
+</body>
+</html>

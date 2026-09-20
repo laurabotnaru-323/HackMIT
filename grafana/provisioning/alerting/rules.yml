@@ -1,0 +1,79 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: threshold-compliance
+    folder: THRESHOLD
+    interval: 30s
+    rules:
+      - uid: threshold-limit-exceeded
+        title: Noise limit exceeded
+        condition: C
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Measured level is above the ordinance limit in force
+          description: >
+            The measured level has stayed above the configured threshold for a full minute
+            with cancellation running. Mitigation is at maximum and the site still needs
+            attention. Prototype readings are not certified compliance measurements.
+        noDataState: NoData
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: {from: 120, to: 0}
+            datasourceUid: threshold-prom
+            model:
+              refId: A
+              expr: threshold_margin_db
+              instant: false
+              intervalMs: 1000
+              maxDataPoints: 120
+          - refId: B
+            relativeTimeRange: {from: 120, to: 0}
+            datasourceUid: __expr__
+            model:
+              refId: B
+              type: reduce
+              reducer: mean
+              expression: A
+          - refId: C
+            relativeTimeRange: {from: 120, to: 0}
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator: {type: lt, params: [0]}
+
+      - uid: threshold-feed-lost
+        title: Hardware feed lost
+        condition: C
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: No frames from the unit for two minutes
+          description: The exporter has not measured a frame recently. Check the cable and the Pi.
+        noDataState: NoData
+        execErrState: Error
+        data:
+          - refId: A
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: threshold-prom
+            model: {refId: A, expr: threshold_feed_age_seconds, instant: false, intervalMs: 1000, maxDataPoints: 300}
+          - refId: B
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: __expr__
+            model: {refId: B, type: reduce, reducer: last, expression: A}
+          - refId: C
+            relativeTimeRange: {from: 300, to: 0}
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: B
+              conditions:
+                - evaluator: {type: gt, params: [120]}
