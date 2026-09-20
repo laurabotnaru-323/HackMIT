@@ -856,6 +856,12 @@ function rank(){
   });
   renderCards(); updateMap();
 }
+// which of the three generated site models fits this parcel
+function siteKind(name){
+  if (/brownfield|former|quarry/i.test(name)) return 'brown';
+  if (/rural|exurban|farm|prairie|desert parcel|ranch/i.test(name)) return 'rural';
+  return 'industrial';
+}
 function siteRender(c, i){
   // an isometric model of a facility on its parcel: size follows MW, greenery follows habitat, houses follow residential proximity
   const r = rng(i * 7 + 3); const W = 400, H = 250; const s = clamp(0.6 + c.mw / 400, 0.6, 1.3);
@@ -904,10 +910,10 @@ function renderCards(){
     solar.appendChild(sIcon); solar.appendChild(sText); card.appendChild(solar);
     const gm = document.createElement('a'); gm.className = 'gmap'; gm.href = `https://www.google.com/maps/search/?api=1&query=${c.ll[0]},${c.ll[1]}`; gm.target = '_blank'; gm.rel = 'noopener noreferrer'; gm.textContent = `Open ${c.ll[0].toFixed(3)}, ${c.ll[1].toFixed(3)} in Google Maps`; card.appendChild(gm);
     const rd = document.createElement('div'); rd.className = 'render';
-    // a generated model of a facility in this biome, with the drawn parcel model as the fallback
+    // a generated model of a facility of this kind in this biome, with the drawn parcel as fallback
     const biome = REGIONS[regionSel.value].biome || 'plains';
     const img = document.createElement('img');
-    img.src = `assets/sites/${biome}.jpg`; img.loading = 'lazy'; img.decoding = 'async';
+    img.src = `assets/sites/${biome}-${siteKind(c.name)}.jpg`; img.loading = 'lazy'; img.decoding = 'async';
     img.alt = `Model of a facility at ${c.place}. Not a photograph of the parcel.`;
     img.addEventListener('error', () => { rd.textContent = ''; rd.innerHTML = siteRender(c, i); }, { once: true });
     rd.appendChild(img); card.appendChild(rd);

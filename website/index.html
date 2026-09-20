@@ -73,6 +73,15 @@ p{margin:0}
 .stage{position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;--p:0;background:#3c4548}
 .stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .8s var(--ease);will-change:transform}
 .stage.video-ready video{opacity:1}
+/* The composed static hero, for the five gated cases. One JS-toggled class drives it,
+   set from the same GATES list the scrub decision uses, so the two can never disagree. */
+.statichero{position:absolute;inset:0;background:url('assets/hero-ending.jpg') center/cover no-repeat;display:none}
+html.gated .statichero{display:block}
+html.gated .hero{height:100vh;height:100svh}
+html.gated .scene,html.gated .hud,html.gated .cue,html.gated .ring{display:none}
+html.gated .band{top:auto;bottom:12vh}
+html.gated .band.b4{top:auto;bottom:10vh}
+html.gated .scrim{background:linear-gradient(0deg,rgba(6,10,12,.92) 0%,rgba(6,10,12,.8) 26%,rgba(6,10,12,.42) 48%,rgba(6,10,12,.1) 66%,rgba(6,10,12,.5) 100%)}
 .poster{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity .9s var(--ease)}
 .stage.poster-on .poster{opacity:1}
 .stage.video-ready .poster{opacity:0}
@@ -82,7 +91,7 @@ p{margin:0}
 .scene{position:absolute;inset:0;width:100%;height:100%;display:block}
 /* The captions all live in the sky, so the base scrim grades the sky down from the top.
    Read as haze rather than as a panel laid over the shot, and it carries the nav too. */
-.scrim{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(6,10,12,.62) 0%,rgba(6,10,12,.46) 18%,rgba(6,10,12,.2) 36%,rgba(6,10,12,0) 52%),radial-gradient(ellipse 120% 90% at 50% 45%,rgba(8,12,14,0) 40%,rgba(8,12,14,.52) 100%)}
+.scrim{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(6,10,12,.78) 0%,rgba(6,10,12,.7) 20%,rgba(6,10,12,.5) 34%,rgba(6,10,12,.2) 46%,rgba(6,10,12,0) 58%),radial-gradient(ellipse 120% 90% at 50% 45%,rgba(8,12,14,0) 40%,rgba(8,12,14,.52) 100%)}
 .ring{position:absolute;left:50%;bottom:26px;width:34px;height:34px;margin-left:-17px;color:var(--accent);transform:rotate(-90deg);display:none}
 .stage.loading .ring{display:block}
 
@@ -112,7 +121,7 @@ p{margin:0}
 
 /* caption bands */
 .band{position:absolute;top:16vh;left:clamp(16px,6vw,96px);max-width:min(720px,84vw);opacity:0;text-shadow:var(--tshadow);--k:0;z-index:3;pointer-events:none}
-.band::before{content:"";position:absolute;inset:-160% -56%;pointer-events:none;z-index:-1;opacity:calc(.25 + .75*var(--k,1));background:radial-gradient(ellipse 52% 30% at 50% 50%,rgba(5,8,10,.52) 0%,rgba(5,8,10,.34) 44%,rgba(5,8,10,0) 74%)}
+.band::before{content:"";position:absolute;inset:-160% -56%;pointer-events:none;z-index:-1;opacity:calc(.25 + .75*var(--k,1));background:radial-gradient(ellipse 52% 30% at 50% 50%,rgba(5,8,10,.62) 0%,rgba(5,8,10,.42) 44%,rgba(5,8,10,0) 74%)}
 .band h1,.band h2{font-size:clamp(2.1rem,5.4vw,4.8rem);color:var(--text-primary)}
 .band .kick{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:14px;display:block}
 .band .sub{font-size:clamp(1rem,1.5vw,1.25rem);color:var(--text-secondary);max-width:46ch;margin-top:18px}
@@ -215,6 +224,9 @@ main{position:relative;z-index:2;background:var(--canvas)}
 .impact{display:grid;grid-template-columns:.9fr 1.1fr;gap:clamp(32px,6vw,96px);align-items:center}
 .impact .art{border-radius:24px;overflow:hidden;border:1px solid var(--line);background:var(--panel);aspect-ratio:4/3;position:relative}
 .impact .art svg{width:100%;height:100%;display:block}
+/* the hero's resting frame, reused; the drawn panel underneath carries it if the file is missing */
+.impact .art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:1}
+.impact .art img:not([src]),.impact .art img[src=""]{display:none}
 .figs{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:36px;align-items:start}
 .fig2 b{font-family:var(--display);font-size:clamp(1.6rem,2.4vw,2.3rem);letter-spacing:-.02em;display:block;line-height:1.05;text-wrap:balance}
 .fig2 span{font-size:14px;color:var(--text-secondary);display:block;margin-top:8px}
@@ -309,6 +321,7 @@ footer .disc{max-width:70ch;margin-top:14px}
 
 <section class="hero" id="top" aria-label="Introduction">
   <div class="stage" id="stage">
+    <div class="statichero" aria-hidden="true"></div>
     <div class="poster" aria-hidden="true"></div>
     <video id="heroVideo" preload="none" muted playsinline aria-hidden="true" tabindex="-1"></video>
     <svg class="scene" id="scene" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
@@ -482,8 +495,9 @@ footer .disc{max-width:70ch;margin-top:14px}
 
   <section class="sec card" id="impact">
     <div class="impact">
-      <div class="art part" aria-hidden="true">
-        <svg viewBox="0 0 400 300">
+      <div class="art part">
+        <img src="assets/hero-ending.jpg" alt="The same fence line after cancellation: meadow, trees, birds crossing the sky and deer grazing beside the data center." loading="lazy" decoding="async">
+        <svg viewBox="0 0 400 300" aria-hidden="true">
           <defs><linearGradient id="sk2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f4d6e"/><stop offset="1" stop-color="#cfd9c2"/></linearGradient><linearGradient id="gr2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6fa458"/><stop offset="1" stop-color="#27472a"/></linearGradient><radialGradient id="sun2"><stop offset="0" stop-color="#ffe9b0" stop-opacity=".95"/><stop offset=".3" stop-color="#e8c079" stop-opacity=".55"/><stop offset="1" stop-color="#e8c079" stop-opacity="0"/></radialGradient></defs>
           <rect width="400" height="300" fill="url(#sk2)"/>
           <circle cx="310" cy="70" r="80" fill="url(#sun2)"/><circle cx="310" cy="70" r="26" fill="#ffe9b0" opacity=".85"/>
@@ -834,13 +848,16 @@ function maybeStartVideo(){
   setTimeout(start, 4000);
 }
 
-/* ---------- reduced motion, honored live in both directions ---------- */
+/* ---------- the static hero, and reduced motion honored live in both directions ---------- */
 let pinned = false;
-function pinToFinalStates(){
+function pinHero(){
   pinned = true;
   disableScrub();
   stage.style.setProperty('--p', '1');
   bands.forEach(b => { b.el.style.opacity = b.last ? '1' : '0'; b.el.style.setProperty('--k', '1'); });
+}
+function pinToFinalStates(){
+  pinHero();
   $$('.card').forEach(c => c.classList.add('in', 'settled'));
   $$('.divider .draw').forEach(p => p.style.strokeDashoffset = '0');
   holdSet(1, true);
@@ -850,7 +867,11 @@ function unpinFinalStates(){
   bands.forEach(b => { b.el.style.opacity = ''; b.el.style.removeProperty('--k'); });
 }
 function applyHeroMode(){
-  if (reduced.matches) pinToFinalStates(); else { enableScrub(); maybeStartVideo(); }
+  const gated = GATES.some(q => matchMedia(q).matches);
+  document.documentElement.classList.toggle('gated', gated);
+  if (reduced.matches) pinToFinalStates();        // no motion at all: everything at rest
+  else if (gated) pinHero();                      // a phone still gets the page's motion, just not the scrub
+  else { enableScrub(); maybeStartVideo(); }
 }
 MQLS.forEach(m => m.addEventListener('change', applyHeroMode));
 
