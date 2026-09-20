@@ -49,11 +49,15 @@ async function legibility(page) {
 
   for (let i = 0; i < bands.length; i++) {
     const { a, b } = bands[i];
-    // sample across the band's plateau, not just its middle: the worst frame is the point
-    for (const t of [0.25, 0.5, 0.75, 1]) {
+    // Sample across the band's plateau, not just its middle: the worst frame is the point.
+    // Each band's own opacity is recorded alongside, because a caption that has already
+    // faded out is not text anyone is reading, and holding it to a contrast bar just
+    // measures the raw background at a moment the words are not on screen.
+    for (const t of [0.15, 0.4, 0.65, 0.9]) {
       const p = a + (b - a) * t;
       await page.evaluate(v => scrollTo(0, v), Math.round(heroH * Math.min(p, 0.999)));
       await wait(1000);
+      const op = await page.evaluate(n => +getComputedStyle(document.querySelectorAll('.band')[n]).opacity, i);
       const box = await page.evaluate(n => {
         const el = document.querySelectorAll('.band')[n];
         const t = el.querySelector('h1,h2');
@@ -93,7 +97,9 @@ async function legibility(page) {
       const lt = lum([238, 243, 239]);
       const lw = lum(worst);
       const hi = Math.max(lt, lw), lo = Math.min(lt, lw);
-      results.push({ band: i + 1, at: +p.toFixed(2), ratio: +((hi + 0.05) / (lo + 0.05)).toFixed(2) });
+      const ratio = +((hi + 0.05) / (lo + 0.05)).toFixed(2);
+      const judged = op >= 0.35;
+      results.push({ band: i + 1, at: +p.toFixed(2), op: +op.toFixed(2), ratio, judged, fail: judged && ratio < 3.5 });
     }
   }
   return results;
@@ -111,7 +117,12 @@ async function legibility(page) {
   }
 
   // 2. worst-frame legibility
-  console.log('legibility:', JSON.stringify(await legibility(page)));
+  const leg = await legibility(page);
+  console.log('legibility:', JSON.stringify(leg));
+  const legFails = leg.filter(r => r.fail);
+  console.log('legibility verdict:', legFails.length ? 'FAIL ' + JSON.stringify(legFails)
+    : 'all readable samples >= 3.5:1 (worst ' +
+      Math.min(...leg.filter(r => r.judged).map(r => r.ratio)) + ':1)');
 
   // 3. the press-and-hold, performed like a visitor
   await page.evaluate(() => document.querySelector('#hold').scrollIntoView({ block: 'center' }));
