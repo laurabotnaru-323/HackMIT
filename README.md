@@ -41,11 +41,22 @@ crossfaded. Over the footage sits an instrument layer, hum rings pulsing off the
 roofline and then a glowing inverse waveform that answers them, with the readout
 falling from 66.6 to 54.2 dBA.
 
-Scroll maps to footage time through a curve rather than a straight line. The
-regrowth in the shot runs faster than the story does, so the curve holds the
-barren opening under the two problem beats, runs the melt under the cancellation
-beat, and leaves the last quarter of the scroll for the settle. The keys live in
-`TIMEMAP` in `index.html`.
+The land does not come back everywhere at once. The shot's first frame sits
+underneath as a still barren base, and the footage is revealed over it through a
+soft radial wavefront that opens outward from the unit, so the quiet visibly
+spreads from the device: part way down you can see meadow and open water on the
+left while the right of the same frame is still cracked dirt under haze.
+
+That only works if the footage runs ahead of the wavefront. If the mask opens
+while the shot is still barren it uncovers the same pixels as the poster and
+nothing reads, which is how this looked like a crossfade in its first version.
+So scroll maps to footage time through a curve rather than a straight line: the
+shot reaches its full meadow by the cancellation beat, while the wavefront is
+still only part way across the frame, and the rest of the scroll carries the
+boundary out to the edges, finishing as the payoff caption lands. The keys live
+in `TIMEMAP` in `index.html`, and the wavefront ramp is the `--mr` rule on
+`.stage.has-video video`. The two are a pair; retiming one without the other is
+what breaks the effect.
 
 Below that: the problem, how the unit works, a press-and-hold that cancels the
 hum, the ecological case, the ordinance profiles, and pricing.
@@ -91,7 +102,9 @@ and ending frame.
 `tools/` holds the headless Chrome checks used on this build: the flick test on
 the caption beat map at 120, 240 and 360 pixel steps, the worst-frame legibility
 audit (hide the glyphs, screenshot the real composited page, measure the lightest
-pixel under the text), the press-and-hold performed with a real mouse press,
+pixel under the text, and hold that to 3.5:1 only at scroll positions where the
+caption is actually on screen rather than mid-fade), the press-and-hold performed
+with a real mouse press,
 reduced motion flipped live in both directions, and the page loaded with the
 video blocked at the network.
 
