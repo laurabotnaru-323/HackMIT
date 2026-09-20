@@ -24,6 +24,11 @@ const [, , tab, out, w = '1500', waitMs = '2600', actions = ''] = process.argv;
     await new Promise(r => setTimeout(r, 700));
   }
   await new Promise(r => setTimeout(r, +waitMs));
+  // a sticky header renders at its scroll position in a full-page capture, which
+  // stamps a second copy of it across the middle of the image
+  await page.addStyleTag({ content: '.top,header{position:static!important}' });
+  await page.evaluate(() => scrollTo(0, 0));
+  await new Promise(r => setTimeout(r, 400));
   await page.screenshot({ path: out, fullPage: true });
   console.log(out, errors.length ? 'CONSOLE ERRORS: ' + errors.join(' | ') : 'console clean');
   await browser.close();

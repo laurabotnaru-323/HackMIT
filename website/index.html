@@ -82,9 +82,15 @@ html.gated .scene,html.gated .hud,html.gated .cue,html.gated .ring{display:none}
 html.gated .band{top:auto;bottom:12vh}
 html.gated .band.b4{top:auto;bottom:10vh}
 html.gated .scrim{background:linear-gradient(0deg,rgba(6,10,12,.92) 0%,rgba(6,10,12,.8) 26%,rgba(6,10,12,.42) 48%,rgba(6,10,12,.1) 66%,rgba(6,10,12,.5) 100%)}
+/* The poster is the shot's first frame, and it stays put as the dead base layer.
+   The footage is revealed over it through a wavefront that opens outward from the
+   THRESHOLD unit, so the land does not fade back to life everywhere at once: the
+   quiet spreads from the device, which is the thing the page is actually claiming. */
 .poster{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity .9s var(--ease)}
 .stage.poster-on .poster{opacity:1}
-.stage.video-ready .poster{opacity:0}
+.stage.has-video video{--mr:clamp(0,(var(--p) - .15)*250,135);
+  -webkit-mask-image:radial-gradient(circle at 11% 42%,#000 calc(var(--mr)*1vmax),transparent calc((var(--mr) + 26)*1vmax));
+  mask-image:radial-gradient(circle at 11% 42%,#000 calc(var(--mr)*1vmax),transparent calc((var(--mr) + 26)*1vmax))}
 .stage.has-video .scene .paint,.stage.has-video .scene .novideo{display:none}
 .scene .onvideo{display:none}
 .stage.has-video .scene .onvideo{display:inline}
