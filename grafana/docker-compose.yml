@@ -1,0 +1,66 @@
+# THRESHOLD monitoring stack: exporter -> Prometheus -> Grafana.
+#
+#   docker compose up -d          simulated data, nothing else needed
+#   open http://localhost:3000    the dashboard is already provisioned
+#
+# With hardware: set SIMULATE to an empty string, point the Pi at port 5000 on
+# this host, and set INGEST_FORWARD to wherever ingest_raw_server.py listens.
+services:
+  exporter:
+    image: python:3.12-slim
+    container_name: threshold-exporter
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./exporter:/app:ro
+    command: >
+      python3 threshold_exporter.py
+      --metrics-port 9109
+      --listen 0.0.0.0:5000
+      --forward ${INGEST_FORWARD:-}
+      --profile ${ORDINANCE_PROFILE:-prince_william}
+      --calibration-offset ${CALIBRATION_OFFSET:-73}
+      ${SIMULATE:---simulate}
+    ports:
+      - "9109:9109"
+      - "5000:5000"
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: threshold-prometheus
+    restart: unless-stopped
+    depends_on: [exporter]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prom-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: threshold-grafana
+    restart: unless-stopped
+    depends_on: [prometheus]
+    volumes:
+      - ./provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-threshold}
+      GF_USERS_DEFAULT_THEME: dark
+      # anonymous viewing so a judge can open the dashboard without a login
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      # allow_embedding lets the THRESHOLD site iframe a panel
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+      GF_SECURITY_COOKIE_SAMESITE: none
+      TWILIO_WEBHOOK_URL: ${TWILIO_WEBHOOK_URL:-http://example.invalid/sms}
+    ports:
+      - "3000:3000"
+
+volumes:
+  prom-data:
+  grafana-data:
